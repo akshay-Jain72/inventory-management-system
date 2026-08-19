@@ -53,7 +53,7 @@ const Products = () => {
       }
 
       const response = await fetch(
-        "http://localhost:5000/products",
+        "https://inventory-management-system-lzyk.onrender.com/products",
         {
           method: "GET",
           headers: {
@@ -152,7 +152,7 @@ const Products = () => {
       }
 
       const response = await fetch(
-        "http://localhost:5000/products",
+        "https://inventory-management-system-lzyk.onrender.com/products",
         {
           method: "POST",
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./Sales.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://inventory-management-system-lzyk.onrender.com";
 
 const Sales = () => {
   const [sales, setSales] = useState([]);

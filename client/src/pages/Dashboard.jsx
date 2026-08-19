@@ -22,7 +22,7 @@ const Dashboard = () => {
       }
 
       const response = await fetch(
-        "http://localhost:5000/dashboard",
+        "https://inventory-management-system-lzyk.onrender.com/dashboard",
         {
           method: "GET",
           headers: {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Purchases.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://inventory-management-system-lzyk.onrender.com";
 
 const Purchases = () => {
   const navigate = useNavigate();

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Suppliers.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://inventory-management-system-lzyk.onrender.com";
 
 const Suppliers = () => {
   const navigate = useNavigate();
