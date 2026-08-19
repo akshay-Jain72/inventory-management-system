@@ -1,0 +1,486 @@
+
+
+.suppliers-page {
+  width: 100%;
+  min-height: 100vh;
+  padding: 30px;
+  background: #f5f7fb;
+  box-sizing: border-box;
+  color: #1f2937;
+}
+
+
+/* =========================================
+   HEADER
+========================================= */
+
+.suppliers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.suppliers-header h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.suppliers-header p {
+  margin: 7px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.supplier-role {
+  padding: 10px 18px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: #6b7280;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.supplier-role strong {
+  color: #111827;
+  text-transform: capitalize;
+}
+
+
+/* =========================================
+   SUCCESS / ERROR
+========================================= */
+
+.supplier-success,
+.supplier-error {
+  padding: 13px 16px;
+  margin-bottom: 20px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.supplier-success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+.supplier-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+
+/* =========================================
+   FORM CARD
+========================================= */
+
+.supplier-form-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.supplier-form-header {
+  margin-bottom: 24px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.supplier-form-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  color: #111827;
+}
+
+.supplier-form-header p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+
+/* =========================================
+   FORM GRID
+========================================= */
+
+.supplier-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s ease;
+  font-family: inherit;
+}
+
+.form-group input {
+  height: 44px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+
+/* =========================================
+   FORM BUTTONS
+========================================= */
+
+.supplier-form-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.save-supplier-btn,
+.cancel-supplier-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.save-supplier-btn {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.save-supplier-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.save-supplier-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancel-supplier-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.cancel-supplier-btn:hover {
+  background: #e5e7eb;
+}
+
+
+/* =========================================
+   TABLE CARD
+========================================= */
+
+.supplier-table-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+
+/* =========================================
+   TABLE HEADER
+========================================= */
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 25px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.table-header h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  color: #111827;
+}
+
+.table-header p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.supplier-count {
+  padding: 7px 13px;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+/* =========================================
+   TABLE
+========================================= */
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-container table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.table-container thead {
+  background: #f9fafb;
+}
+
+.table-container th {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.table-container td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f0f1f3;
+  color: #4b5563;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.table-container tbody tr {
+  transition: background 0.2s ease;
+}
+
+.table-container tbody tr:hover {
+  background: #f9fafb;
+}
+
+.table-container tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-container td strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+
+/* =========================================
+   ACTION BUTTONS
+========================================= */
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.edit-btn {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.edit-btn:hover {
+  background: #dbeafe;
+}
+
+.delete-btn {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.delete-btn:hover {
+  background: #fee2e2;
+}
+
+
+/* =========================================
+   NO DATA
+========================================= */
+
+.no-suppliers {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.no-suppliers h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #374151;
+}
+
+.no-suppliers p {
+  margin: 7px 0 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+
+/* =========================================
+   LOADING
+========================================= */
+
+.suppliers-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fb;
+}
+
+.suppliers-loading h2 {
+  margin-top: 15px;
+  color: #374151;
+  font-size: 18px;
+}
+
+.loading-spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: supplierSpin 0.8s linear infinite;
+}
+
+@keyframes supplierSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 900px) {
+
+  .suppliers-page {
+    padding: 20px;
+  }
+
+  .suppliers-header {
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .supplier-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.full-width {
+    grid-column: auto;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .suppliers-page {
+    padding: 15px;
+  }
+
+  .suppliers-header {
+    flex-direction: column;
+  }
+
+  .suppliers-header h1 {
+    font-size: 25px;
+  }
+
+  .supplier-role {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .supplier-form-card {
+    padding: 18px;
+  }
+
+  .table-header {
+    padding: 18px;
+  }
+
+  .supplier-form-buttons {
+    flex-direction: column;
+  }
+
+  .save-supplier-btn,
+  .cancel-supplier-btn {
+    width: 100%;
+  }
+
+}

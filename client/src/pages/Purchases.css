@@ -1,0 +1,529 @@
+/* ================================
+   PURCHASES PAGE
+================================ */
+
+.purchases-page {
+  padding: 30px;
+  background: #f5f7fb;
+  min-height: calc(100vh - 70px);
+  color: #172033;
+  box-sizing: border-box;
+}
+
+
+/* ================================
+   HEADER
+================================ */
+
+.purchases-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.purchases-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.purchases-header p {
+  margin: 6px 0 0;
+  color: #718096;
+  font-size: 14px;
+}
+
+.purchase-role {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #64748b;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.purchase-role strong {
+  color: #2563eb;
+  text-transform: capitalize;
+}
+
+
+/* ================================
+   SUCCESS / ERROR
+================================ */
+
+.purchase-success,
+.purchase-error {
+  padding: 13px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.purchase-success {
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.purchase-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+
+/* ================================
+   FORM CARD
+================================ */
+
+.purchase-form-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05);
+}
+
+.purchase-form-header {
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.purchase-form-header h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  color: #172033;
+}
+
+.purchase-form-header p {
+  margin: 5px 0 0;
+  color: #718096;
+  font-size: 13px;
+}
+
+
+/* ================================
+   FORM GRID
+================================ */
+
+.purchase-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+  box-sizing: border-box;
+
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  font-size: 14px;
+  outline: none;
+
+  transition: 0.2s ease;
+}
+
+.form-group input::placeholder {
+  color: #a0aec0;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+.form-group select {
+  cursor: pointer;
+}
+
+.form-group input:disabled,
+.form-group select:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+
+/* ================================
+   FORM BUTTONS
+================================ */
+
+.purchase-form-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.save-purchase-btn,
+.cancel-purchase-btn {
+  height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.save-purchase-btn {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.save-purchase-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.save-purchase-btn:disabled,
+.cancel-purchase-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancel-purchase-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.cancel-purchase-btn:hover {
+  background: #e2e8f0;
+}
+
+
+/* ================================
+   VIEW ONLY
+================================ */
+
+.purchase-view-only {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 13px 16px;
+  margin-bottom: 22px;
+
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+
+  color: #64748b;
+  font-size: 13px;
+}
+
+.purchase-view-only strong {
+  color: #475569;
+  font-weight: 600;
+}
+
+
+/* ================================
+   PURCHASE TABLE CARD
+================================ */
+
+.purchase-table-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05);
+}
+
+
+/* ================================
+   TABLE HEADER
+================================ */
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 20px 22px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  color: #172033;
+}
+
+.table-header p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: #718096;
+}
+
+.purchase-count {
+  padding: 7px 12px;
+
+  background: #eff6ff;
+  color: #2563eb;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+/* ================================
+   TABLE CONTAINER
+================================ */
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-container table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+
+/* ================================
+   TABLE HEAD
+================================ */
+
+.table-container thead {
+  background: #f8fafc;
+}
+
+.table-container th {
+  padding: 14px 16px;
+
+  text-align: left;
+
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+
+/* ================================
+   TABLE BODY
+================================ */
+
+.table-container td {
+  padding: 15px 16px;
+
+  font-size: 13px;
+  color: #475569;
+
+  border-bottom: 1px solid #f0f2f5;
+
+  vertical-align: middle;
+}
+
+.table-container tbody tr {
+  transition: background 0.15s ease;
+}
+
+.table-container tbody tr:hover {
+  background: #f8fafc;
+}
+
+.table-container tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-container td strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+
+/* ================================
+   ACTION BUTTONS
+================================ */
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 7px 12px;
+
+  border-radius: 6px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.edit-btn {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+}
+
+.edit-btn:hover {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
+.delete-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+}
+
+.delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+
+/* ================================
+   NO DATA
+================================ */
+
+.no-data {
+  text-align: center !important;
+  padding: 55px 20px !important;
+
+  color: #94a3b8 !important;
+  font-size: 14px !important;
+}
+
+
+/* ================================
+   LOADING
+================================ */
+
+.purchases-loading {
+  min-height: calc(100vh - 70px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #f5f7fb;
+  color: #334155;
+}
+
+.purchases-loading h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 900px) {
+
+  .purchases-page {
+    padding: 20px;
+  }
+
+  .purchases-header {
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .purchase-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .purchases-page {
+    padding: 15px;
+  }
+
+  .purchases-header {
+    flex-direction: column;
+  }
+
+  .purchases-header h1 {
+    font-size: 24px;
+  }
+
+  .purchase-role {
+    width: fit-content;
+  }
+
+  .purchase-form-card {
+    padding: 18px;
+  }
+
+  .purchase-form-buttons {
+    flex-direction: column;
+  }
+
+  .save-purchase-btn,
+  .cancel-purchase-btn {
+    width: 100%;
+  }
+
+  .table-header {
+    padding: 17px;
+  }
+
+  .table-header h2 {
+    font-size: 16px;
+  }
+
+  .purchase-view-only {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+}
