@@ -1068,8 +1068,6 @@ app.get(
 });
 
 
-// Register User
-a
   // Register User
 app.post("/api/auth/register", async (req, res) => {
   try {
