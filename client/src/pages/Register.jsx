@@ -10,18 +10,24 @@ const Register = () => {
   });
 
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  function handleChange(e) {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-  async function handleSubmit(e) {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    setMessage("");
+    setLoading(true);
 
     try {
       const response = await fetch(
@@ -37,25 +43,83 @@ const Register = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
-        setMessage("Registration successful!");
+      // IMPORTANT DEBUG
+      console.log("REGISTER STATUS:", response.status);
+      console.log("REGISTER RESPONSE:", data);
+      console.log("TOKEN FROM BACKEND:", data.token);
+      console.log("USER FROM BACKEND:", data.user);
 
-        setFormData({
-          name: "",
-          email: "",
-          password: "",
-        });
-      } else {
-        setMessage(data.message);
+      if (!response.ok) {
+        setMessage(data.message || "Registration failed");
+        return;
       }
+
+      // Token check
+      if (!data.token) {
+        console.error("TOKEN NOT RECEIVED FROM BACKEND");
+        setMessage(
+          "Registration successful, but token was not received."
+        );
+        return;
+      }
+
+      // User check
+      if (!data.user) {
+        console.error("USER DATA NOT RECEIVED FROM BACKEND");
+        setMessage(
+          "Registration successful, but user data was not received."
+        );
+        return;
+      }
+
+      // Save token
+      localStorage.setItem("token", data.token);
+
+      // Save user
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data.user)
+      );
+
+      // Verify
+      console.log(
+        "TOKEN SAVED:",
+        localStorage.getItem("token")
+      );
+
+      console.log(
+        "USER SAVED:",
+        localStorage.getItem("user")
+      );
+
+      setMessage("Registration successful!");
+
+      // Form clear
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+      });
+
+      // Dashboard
+      navigate("/dashboard", {
+        replace: true,
+      });
+
     } catch (error) {
-      console.log(error);
-      setMessage("Server error. Please try again.");
+      console.error("REGISTER ERROR:", error);
+
+      setMessage(
+        "Server error. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="register-page">
+
       <div className="register-box">
 
         <h1>Create Account</h1>
@@ -66,7 +130,9 @@ const Register = () => {
 
         <form onSubmit={handleSubmit}>
 
+          {/* NAME */}
           <div className="form-group">
+
             <label>Name</label>
 
             <input
@@ -77,9 +143,12 @@ const Register = () => {
               onChange={handleChange}
               required
             />
+
           </div>
 
+          {/* EMAIL */}
           <div className="form-group">
+
             <label>Email</label>
 
             <input
@@ -90,9 +159,12 @@ const Register = () => {
               onChange={handleChange}
               required
             />
+
           </div>
 
+          {/* PASSWORD */}
           <div className="form-group">
+
             <label>Password</label>
 
             <input
@@ -103,33 +175,42 @@ const Register = () => {
               onChange={handleChange}
               required
             />
+
           </div>
 
+          {/* REGISTER BUTTON */}
           <button
             type="submit"
             className="register-button"
+            disabled={loading}
           >
-            Register
+            {loading
+              ? "Registering..."
+              : "Register"}
           </button>
 
         </form>
 
+        {/* MESSAGE */}
         {message && (
           <p className="register-message">
             {message}
           </p>
         )}
 
+        {/* LOGIN LINK */}
         <p className="login-link">
           Already have an account?{" "}
 
-          <span onClick={() => navigate("/login")}>
+          <span
+            onClick={() => navigate("/login")}
+          >
             Login
           </span>
-
         </p>
 
       </div>
+
     </div>
   );
 };

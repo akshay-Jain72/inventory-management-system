@@ -1,14 +1,14 @@
-/* =========================
+/* =====================================================
    SIDEBAR
-========================= */
+===================================================== */
 
 .sidebar {
   width: 240px;
   height: 100vh;
 
   position: fixed;
-  left: 0;
   top: 0;
+  left: 0;
 
   display: flex;
   flex-direction: column;
@@ -20,24 +20,38 @@
   box-sizing: border-box;
 
   z-index: 1000;
+
+  transform: translateX(0);
+
+  transition: transform 0.25s ease;
 }
 
 
-/* =========================
-   HEADER / LOGO
-========================= */
+/* =====================================================
+   HEADER
+===================================================== */
 
 .sidebar-header {
   height: 72px;
 
   display: flex;
   align-items: center;
+  justify-content: space-between;
 
-  padding: 0 22px;
+  padding: 0 18px 0 22px;
 
   border-bottom: 1px solid #f1f1f1;
 
   box-sizing: border-box;
+
+  flex-shrink: 0;
+}
+
+
+/* LOGO */
+
+.sidebar-logo {
+  min-width: 0;
 }
 
 .sidebar-logo h2 {
@@ -47,6 +61,8 @@
   font-weight: 700;
 
   color: #111827;
+
+  line-height: 1.2;
 }
 
 .sidebar-logo span {
@@ -60,71 +76,52 @@
 }
 
 
-/* =========================
-   USER PROFILE
-========================= */
+/* =====================================================
+   CLOSE BUTTON
+===================================================== */
 
-.sidebar-profile {
-  display: flex;
-  align-items: center;
+.sidebar-close-button {
+  display: none;
 
-  gap: 12px;
+  width: 36px;
+  height: 36px;
 
-  padding: 18px 20px;
-
-  border-bottom: 1px solid #f1f1f1;
-}
-
-.profile-avatar {
-  width: 38px;
-  height: 38px;
-
-  display: flex;
   align-items: center;
   justify-content: center;
 
-  border-radius: 50%;
+  padding: 0;
 
-  background: #2563eb;
+  border: none;
+  border-radius: 8px;
 
-  color: #ffffff;
+  background: transparent;
 
-  font-size: 15px;
-  font-weight: 600;
+  color: #374151;
+
+  font-size: 28px;
+  font-weight: 400;
+
+  line-height: 1;
+
+  cursor: pointer;
 
   flex-shrink: 0;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
-.profile-details {
-  min-width: 0;
+.sidebar-close-button:hover {
+  background: #f3f4f6;
 
-  display: flex;
-  flex-direction: column;
-
-  gap: 3px;
-}
-
-.profile-details strong {
   color: #111827;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.profile-details span {
-  color: #6b7280;
-
-  font-size: 12px;
 }
 
 
-/* =========================
+/* =====================================================
    NAVIGATION
-========================= */
+===================================================== */
 
 .sidebar-navigation {
   flex: 1;
@@ -132,6 +129,9 @@
   padding: 22px 14px;
 
   overflow-y: auto;
+  overflow-x: hidden;
+
+  box-sizing: border-box;
 }
 
 .menu-title {
@@ -153,9 +153,9 @@
 }
 
 
-/* =========================
+/* =====================================================
    MENU ITEM
-========================= */
+===================================================== */
 
 .sidebar-item {
   width: 100%;
@@ -163,13 +163,12 @@
   display: flex;
   align-items: center;
 
-  border: none;
-
-  background: transparent;
-
   padding: 11px 12px;
 
+  border: none;
   border-radius: 7px;
+
+  background: transparent;
 
   color: #4b5563;
 
@@ -204,28 +203,31 @@
 }
 
 
-/* =========================
-   BOTTOM
-========================= */
+/* =====================================================
+   LOGOUT
+===================================================== */
 
 .sidebar-bottom {
   padding: 14px;
 
   border-top: 1px solid #f1f1f1;
+
+  flex-shrink: 0;
+
+  box-sizing: border-box;
 }
 
 .logout-button {
   width: 100%;
 
+  padding: 11px 12px;
+
   border: none;
+  border-radius: 7px;
 
   background: transparent;
 
   color: #dc2626;
-
-  padding: 11px 12px;
-
-  border-radius: 7px;
 
   font-size: 14px;
   font-weight: 500;
@@ -234,7 +236,9 @@
 
   cursor: pointer;
 
-  transition: 0.2s;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .logout-button:hover {
@@ -244,9 +248,9 @@
 }
 
 
-/* =========================
+/* =====================================================
    SCROLLBAR
-========================= */
+===================================================== */
 
 .sidebar-navigation::-webkit-scrollbar {
   width: 4px;
@@ -258,31 +262,92 @@
   border-radius: 10px;
 }
 
+.sidebar-navigation::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-/* =========================
-   RESPONSIVE
-========================= */
+
+/* =====================================================
+   MOBILE
+===================================================== */
 
 @media (max-width: 768px) {
 
   .sidebar {
-    width: 210px;
+    width: 280px;
+    max-width: 85vw;
+
+    box-shadow:
+      8px 0 30px rgba(0, 0, 0, 0.12);
+
+    transform: translateX(-100%);
+  }
+
+  /* OPEN */
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  /* CLOSE BUTTON */
+
+  .sidebar-close-button {
+    display: flex;
   }
 
   .sidebar-header {
-    padding: 0 18px;
-  }
+    height: 70px;
 
-  .sidebar-profile {
-    padding: 16px;
+    padding: 0 14px 0 20px;
   }
 
   .sidebar-navigation {
-    padding: 18px 10px;
+    padding: 22px 14px;
+  }
+
+  .sidebar-item {
+    padding: 12px;
   }
 
   .sidebar-bottom {
-    padding: 10px;
+    padding: 14px;
+  }
+}
+
+
+/* =====================================================
+   SMALL MOBILE
+===================================================== */
+
+@media (max-width: 480px) {
+
+  .sidebar {
+    width: 280px;
   }
 
+  .sidebar-header {
+    height: 68px;
+
+    padding-left: 18px;
+    padding-right: 12px;
+  }
+
+  .sidebar-logo h2 {
+    font-size: 19px;
+  }
+
+  .sidebar-logo span {
+    font-size: 10px;
+  }
+
+  .sidebar-close-button {
+    width: 36px;
+    height: 36px;
+
+    font-size: 28px;
+  }
+
+  .sidebar-navigation {
+    padding: 20px 12px;
+  }
 }

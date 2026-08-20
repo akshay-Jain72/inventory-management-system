@@ -3,19 +3,21 @@ import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
 const Login = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setError("");
 
-    if (!email || !password) {
+    // Validation
+    if (!email.trim() || !password.trim()) {
       setError("Email and password are required");
       return;
     }
@@ -27,11 +29,13 @@ const Login = () => {
         "https://inventory-management-system-lzyk.onrender.com/api/auth/login",
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
-            email,
+            email: email.trim(),
             password,
           }),
         }
@@ -39,23 +43,62 @@ const Login = () => {
 
       const data = await response.json();
 
+      // Login failed
       if (!response.ok) {
-        setError(data.message || "Login failed");
+        setError(
+          data.message || "Invalid email or password"
+        );
         return;
       }
 
-      // Save JWT token
-      localStorage.setItem("token", data.token);
+      // Backend token check
+      if (!data.token) {
+        setError(
+          "Login successful, but authentication token was not received."
+        );
+        return;
+      }
 
-      // Save user information
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // Backend user check
+      if (!data.user) {
+        setError(
+          "Login successful, but user information was not received."
+        );
+        return;
+      }
 
-      // Go to dashboard
-      navigate("/dashboard");
+      // =====================================
+      // SAVE TOKEN
+      // =====================================
+
+      localStorage.setItem(
+        "token",
+        data.token
+      );
+
+      // =====================================
+      // SAVE USER
+      // =====================================
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data.user)
+      );
+
+      // =====================================
+      // REDIRECT
+      // =====================================
+
+      navigate("/dashboard", {
+        replace: true,
+      });
 
     } catch (error) {
-      console.log(error);
-      setError("Server error. Please try again.");
+      console.error("Login Error:", error);
+
+      setError(
+        "Server error. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -66,59 +109,98 @@ const Login = () => {
 
       <div className="login-container">
 
+        {/* HEADER */}
         <div className="login-header">
-          <h1>Inventory Management</h1>
-          <p>Login to your account</p>
+
+          <h1>
+            Inventory Management
+          </h1>
+
+          <p>
+            Login to your account
+          </p>
+
         </div>
 
+        {/* ERROR */}
         {error && (
           <div className="login-error">
             {error}
           </div>
         )}
 
+        {/* FORM */}
         <form onSubmit={handleSubmit}>
 
+          {/* EMAIL */}
           <div className="form-group">
-            <label>Email</label>
+
+            <label htmlFor="email">
+              Email
+            </label>
 
             <input
+              id="email"
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
+              required
             />
+
           </div>
 
+          {/* PASSWORD */}
           <div className="form-group">
-            <label>Password</label>
+
+            <label htmlFor="password">
+              Password
+            </label>
 
             <input
+              id="password"
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+              required
             />
+
           </div>
 
+          {/* LOGIN BUTTON */}
           <button
             type="submit"
             className="login-button"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading
+              ? "Logging in..."
+              : "Login"}
           </button>
 
         </form>
 
+        {/* REGISTER */}
         <div className="register-link">
-          <p>
-            Don't have an account?
 
-            <span onClick={() => navigate("/register")}>
+          <p>
+            Don't have an account?{" "}
+
+            <span
+              onClick={() =>
+                navigate("/register")
+              }
+            >
               Register
             </span>
+
           </p>
+
         </div>
 
       </div>

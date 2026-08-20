@@ -1069,14 +1069,21 @@ app.get(
 
 
 // Register User
+a
+  // Register User
 app.post("/api/auth/register", async (req, res) => {
   try {
-   const { name, email, password } = req.body;
+    const { name, email, password } = req.body;
+
+    console.log("REGISTER REQUEST:", {
+      name,
+      email,
+    });
 
     // Check all fields
     if (!name || !email || !password) {
       return res.status(400).json({
-        message: "Name, email and password are required"
+        message: "Name, email and password are required",
       });
     }
 
@@ -1085,7 +1092,7 @@ app.post("/api/auth/register", async (req, res) => {
 
     if (existingUser) {
       return res.status(400).json({
-        message: "User already exists"
+        message: "User already exists",
       });
     }
 
@@ -1094,52 +1101,77 @@ app.post("/api/auth/register", async (req, res) => {
 
     // Create user
     const user = await User.create({
-  name,
-  email,
-  password: hashedPassword,
-  role: "staff"
-});
+      name,
+      email,
+      password: hashedPassword,
+      role: "staff",
+    });
 
-    res.status(201).json({
-      message: "User registered successfully",
+    // Check JWT secret
+    if (!process.env.JWT_SECRET) {
+      console.log("JWT_SECRET is missing!");
+
+      return res.status(500).json({
+        message: "JWT_SECRET is not configured on server",
+      });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id.toString(),
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1d",
+      }
+    );
+
+    console.log("TOKEN CREATED:", !!token);
+
+    // Response
+    return res.status(201).json({
+      message: "Registration successful",
+      token: token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
 
   } catch (error) {
-    res.status(500).json({
-      message: error.message
+    console.log("Register Error:", error);
+
+    return res.status(500).json({
+      message: error.message,
     });
   }
 });
 
+// Login User
 
 // Login User
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check fields
     if (!email || !password) {
       return res.status(400).json({
-        message: "Email and password are required"
+        message: "Email and password are required",
       });
     }
 
-    // Find user
     const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(401).json({
-        message: "Invalid email or password"
+        message: "Invalid email or password",
       });
     }
 
-    // Compare password
     const isPasswordCorrect = await bcrypt.compare(
       password,
       user.password
@@ -1147,41 +1179,48 @@ app.post("/api/auth/login", async (req, res) => {
 
     if (!isPasswordCorrect) {
       return res.status(401).json({
-        message: "Invalid email or password"
+        message: "Invalid email or password",
       });
     }
 
-    // Create JWT token
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({
+        message: "JWT_SECRET is not configured on server",
+      });
+    }
+
     const token = jwt.sign(
       {
-        userId: user._id,
-        role: user.role
+        userId: user._id.toString(),
+        role: user.role,
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: "1d"
+        expiresIn: "1d",
       }
     );
 
-    res.json({
+    return res.status(200).json({
       message: "Login successful",
       token: token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
 
   } catch (error) {
-    res.status(500).json({
-      message: error.message
+    console.log("Login Error:", error);
+
+    return res.status(500).json({
+      message: error.message,
     });
   }
 });
 
-
+    // Create JWT token
 // Protected route - Test JWT
 app.get("/api/auth/me", authMiddleware, async (req, res) => {
   try {

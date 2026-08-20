@@ -1,74 +1,143 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 
 const Navbar = () => {
-  const location = useLocation();
+  const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user"));
 
-  // URL ke according page name
-  const getPageName = () => {
-    switch (location.pathname) {
-      case "/":
-      case "/dashboard":
-        return "Dashboard";
+  // Logged-in user ka role
+  const userRole = user?.role || "staff";
 
-      case "/products":
-        return "Products";
+  // Role ka first letter
+  const roleInitial = userRole.charAt(0).toUpperCase();
 
-      case "/purchases":
-        return "Purchases";
+  // Logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
 
-      case "/sales":
-        return "Sales";
-
-      case "/suppliers":
-        return "Suppliers";
-
-      case "/reports":
-        return "Reports";
-
-      default:
-        return "Dashboard";
-    }
+    navigate("/login", { replace: true });
   };
-
-  const pageName = getPageName();
 
   return (
     <header className="navbar">
 
-      {/* Left */}
-      <div className="navbar-left">
-        <h2>{pageName}</h2>
+      {/* =====================================
+          LEFT - LOGO / BRAND
+      ====================================== */}
+
+      <div className="navbar-brand">
+
+        <div className="brand-icon">
+          IM
+        </div>
+
+        <div className="brand-text">
+          <h2>Inventory</h2>
+          <span>Management</span>
+        </div>
+
       </div>
 
-      {/* Right */}
+
+      {/* =====================================
+          CENTER - NAVIGATION
+      ====================================== */}
+
+      <nav className="navbar-menu">
+
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            `nav-link ${isActive ? "active" : ""}`
+          }
+        >
+          Dashboard
+        </NavLink>
+
+        <NavLink
+          to="/products"
+          className={({ isActive }) =>
+            `nav-link ${isActive ? "active" : ""}`
+          }
+        >
+          Products
+        </NavLink>
+
+        <NavLink
+          to="/suppliers"
+          className={({ isActive }) =>
+            `nav-link ${isActive ? "active" : ""}`
+          }
+        >
+          Suppliers
+        </NavLink>
+
+        <NavLink
+          to="/purchases"
+          className={({ isActive }) =>
+            `nav-link ${isActive ? "active" : ""}`
+          }
+        >
+          Purchases
+        </NavLink>
+
+        <NavLink
+          to="/sales"
+          className={({ isActive }) =>
+            `nav-link ${isActive ? "active" : ""}`
+          }
+        >
+          Sales
+        </NavLink>
+
+        <NavLink
+          to="/reports"
+          className={({ isActive }) =>
+            `nav-link ${isActive ? "active" : ""}`
+          }
+        >
+          Reports
+        </NavLink>
+
+      </nav>
+
+
+      {/* =====================================
+          RIGHT - ROLE + LOGOUT
+      ====================================== */}
+
       <div className="navbar-right">
 
-        {/* User Info */}
+        {/* Logged-in Role */}
+
         <div className="user-info">
 
           <div className="user-avatar">
-            {user?.name
-              ? user.name.charAt(0).toUpperCase()
-              : "U"}
+            {roleInitial}
           </div>
 
           <div className="user-details">
-
-            <p className="user-name">
-              {user?.name || "User"}
-            </p>
-
-            <p className="user-role">
-              {user?.role || "staff"}
-            </p>
-
+            <span className="user-role">
+              {userRole}
+            </span>
           </div>
 
         </div>
+
+
+        {/* Logout Button */}
+
+        <button
+          className="logout-button"
+          onClick={handleLogout}
+          title="Logout"
+        >
+          <span className="logout-icon">↪</span>
+          <span>Logout</span>
+        </button>
 
       </div>
 

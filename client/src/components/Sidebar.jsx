@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 
-const Sidebar = () => {
+const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,19 +26,16 @@ const Sidebar = () => {
       path: "/suppliers",
       roles: ["admin", "manager", "staff"],
     },
-     {
+    {
       name: "Purchases",
       path: "/purchases",
       roles: ["admin", "manager", "staff"],
     },
-
     {
       name: "Sales",
       path: "/sales",
       roles: ["admin", "manager", "staff"],
     },
-   
-    
     {
       name: "Reports",
       path: "/reports",
@@ -50,17 +47,33 @@ const Sidebar = () => {
     item.roles.includes(role)
   );
 
+  const handleMenuClick = (path) => {
+    navigate(path);
+
+    // Mobile par menu click ke baad sidebar close
+    setSidebarOpen(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
+    setSidebarOpen(false);
 
     navigate("/login");
   };
 
   return (
-    <aside className="sidebar">
+    <aside
+      className={`sidebar ${
+        sidebarOpen ? "sidebar-open" : ""
+      }`}
+    >
 
-      {/* Logo */}
+      {/* =========================
+          HEADER
+      ========================= */}
+
       <div className="sidebar-header">
 
         <div className="sidebar-logo">
@@ -68,34 +81,23 @@ const Sidebar = () => {
           <span>Management System</span>
         </div>
 
-      </div>
-
-
-      {/* User Profile */}
-      <div className="sidebar-profile">
-
-        <div className="profile-avatar">
-          {user?.name
-            ? user.name.charAt(0).toUpperCase()
-            : "U"}
-        </div>
-
-        <div className="profile-details">
-
-          <strong>
-            {user?.name || "User"}
-          </strong>
-
-          <span>
-            {role.charAt(0).toUpperCase() + role.slice(1)}
-          </span>
-
-        </div>
+        {/* Mobile Close Button */}
+        <button
+          type="button"
+          className="sidebar-close-button"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close menu"
+        >
+          ×
+        </button>
 
       </div>
 
 
-      {/* Navigation */}
+      {/* =========================
+          NAVIGATION
+      ========================= */}
+
       <div className="sidebar-navigation">
 
         <p className="menu-title">
@@ -115,16 +117,17 @@ const Sidebar = () => {
             return (
               <button
                 key={item.name}
+                type="button"
                 className={`sidebar-item ${
                   isActive ? "active" : ""
                 }`}
-                onClick={() => navigate(item.path)}
+                onClick={() =>
+                  handleMenuClick(item.path)
+                }
               >
-
                 <span className="sidebar-item-text">
                   {item.name}
                 </span>
-
               </button>
             );
           })}
@@ -134,16 +137,18 @@ const Sidebar = () => {
       </div>
 
 
-      {/* Bottom */}
+      {/* =========================
+          LOGOUT
+      ========================= */}
+
       <div className="sidebar-bottom">
 
         <button
+          type="button"
           className="logout-button"
           onClick={handleLogout}
         >
-          <span>
-            Logout
-          </span>
+          Logout
         </button>
 
       </div>

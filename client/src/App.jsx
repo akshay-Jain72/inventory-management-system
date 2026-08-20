@@ -7,7 +7,6 @@ import {
 } from "react-router-dom";
 
 // Components
-import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 
 // Pages
@@ -28,15 +27,27 @@ import "./App.css";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user"));
+  const userData = localStorage.getItem("user");
 
-  // Login nahi hai
+  // Token nahi hai
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // User data nahi mila
-  if (!user) {
+  // User data nahi hai
+  if (!userData) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    return <Navigate to="/login" replace />;
+  }
+
+  // User data check
+  try {
+    JSON.parse(userData);
+  } catch (error) {
+    console.log("Invalid user data");
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
@@ -51,8 +62,6 @@ const ProtectedRoute = ({ children }) => {
 // ======================================
 
 const App = () => {
-  const token = localStorage.getItem("token");
-
   return (
     <BrowserRouter>
 
@@ -62,26 +71,16 @@ const App = () => {
             PUBLIC ROUTES
         ================================= */}
 
+        {/* Login */}
         <Route
           path="/login"
-          element={
-            token ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Login />
-            )
-          }
+          element={<Login />}
         />
 
+        {/* Register */}
         <Route
           path="/register"
-          element={
-            token ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Register />
-            )
-          }
+          element={<Register />}
         />
 
 
@@ -104,164 +103,121 @@ const App = () => {
   );
 };
 
-
 // ======================================
 // Dashboard Layout
 // ======================================
 
 const DashboardLayout = () => {
-
   return (
     <div className="app-layout">
 
-      {/* ================================
-          SIDEBAR
+      {/* =================================
+          NAVBAR
       ================================= */}
 
-      <Sidebar />
+      <Navbar />
 
 
-      <div className="main-area">
+      {/* =================================
+          PAGE CONTENT
+      ================================= */}
 
-        {/* ================================
-            NAVBAR
-        ================================= */}
+      <main className="page-content">
 
-        <Navbar />
+        <Routes>
 
+          {/* =================================
+              DEFAULT
+          ================================= */}
 
-        {/* ================================
-            PAGE CONTENT
-        ================================= */}
-
-        <main className="page-content">
-
-          <Routes>
-
-            {/* =================================
-                DEFAULT
-            ================================= */}
-
-            <Route
-              path="/"
-              element={
-                <Navigate
-                  to="/dashboard"
-                  replace
-                />
-              }
-            />
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            }
+          />
 
 
-            {/* =================================
-                DASHBOARD
-            ================================= */}
+          {/* =================================
+              DASHBOARD
+          ================================= */}
 
-            <Route
-              path="/dashboard"
-              element={<Dashboard />}
-            />
-
-
-            {/* =================================
-                PRODUCTS
-
-                Staff:
-                View products only
-
-                Manager/Admin:
-                Add/Edit/Delete
-            ================================= */}
-
-            <Route
-              path="/products"
-              element={<Products />}
-            />
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
 
 
-            {/* =================================
-                PURCHASES
+          {/* =================================
+              PRODUCTS
+          ================================= */}
 
-                Staff:
-                View only
-
-                Manager/Admin:
-                Add/Edit/Delete
-            ================================= */}
-
-            <Route
-              path="/purchases"
-              element={<Purchases />}
-            />
+          <Route
+            path="/products"
+            element={<Products />}
+          />
 
 
-            {/* =================================
-                SALES
+          {/* =================================
+              PURCHASES
+          ================================= */}
 
-                Staff:
-                Add/View sales
-
-                Manager/Admin:
-                Add/Edit/Delete
-            ================================= */}
-
-            <Route
-              path="/sales"
-              element={<Sales />}
-            />
+          <Route
+            path="/purchases"
+            element={<Purchases />}
+          />
 
 
-            {/* =================================
-                SUPPLIERS
+          {/* =================================
+              SALES
+          ================================= */}
 
-                Staff:
-                View suppliers
-
-                Manager/Admin:
-                Add/Edit/Delete
-            ================================= */}
-
-            <Route
-              path="/suppliers"
-              element={<Suppliers />}
-            />
+          <Route
+            path="/sales"
+            element={<Sales />}
+          />
 
 
-            {/* =================================
-                REPORTS
+          {/* =================================
+              SUPPLIERS
+          ================================= */}
 
-                Staff:
-                Basic reports
-
-                Manager/Admin:
-                Full reports
-            ================================= */}
-
-            <Route
-              path="/reports"
-              element={<Reports />}
-            />
+          <Route
+            path="/suppliers"
+            element={<Suppliers />}
+          />
 
 
-            {/* =================================
-                UNKNOWN URL
-            ================================= */}
+          {/* =================================
+              REPORTS
+          ================================= */}
 
-            <Route
-              path="*"
-              element={
-                <Navigate
-                  to="/dashboard"
-                  replace
-                />
-              }
-            />
+          <Route
+            path="/reports"
+            element={<Reports />}
+          />
 
-          </Routes>
 
-        </main>
+          {/* =================================
+              UNKNOWN URL
+          ================================= */}
 
-      </div>
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            }
+          />
+
+        </Routes>
+
+      </main>
 
     </div>
   );
