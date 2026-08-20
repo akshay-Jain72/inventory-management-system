@@ -786,4 +786,56 @@ tbody tr:last-child td {
 .edit-btn:focus,
 .delete-btn:focus,
 .form-group input:focus,
-.form-group
+.form-group select:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #000000;
+    --text-muted: #333333;
+  }
+
+  [data-theme="dark"] .purchases-page,
+  .purchases-page.dark-theme {
+    --border-color: #ffffff;
+    --text-muted: #cccccc;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .purchases-page {
+    background: white;
+    color: black;
+    padding: 0;
+  }
+
+  .purchases-header,
+  .purchase-summary,
+  .purchase-success,
+  .purchase-error,
+  .purchase-form-card,
+  .purchase-form-buttons,
+  .action-buttons,
+  .edit-btn,
+  .delete-btn {
+    display: none;
+  }
+
+  .purchase-table-card {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  table {
+    border: 1px solid #000;
+  }
+
+  th,
+  td {
+    border: 1px solid #000;
+  }
+}

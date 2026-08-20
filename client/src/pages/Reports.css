@@ -846,3 +846,28 @@ tbody tr:last-child td {
   }
 
   [data-theme="dark"] .reports-page,
+  .reports-page.dark-theme {
+    --border-color: #ffffff;
+    --text-muted: #cccccc;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .reports-page {
+    background: white;
+    color: black;
+    padding: 0;
+  }
+
+  .refresh-btn,
+  .report-role {
+    display: none;
+  }
+
+  .report-card,
+  .report-section {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+}
