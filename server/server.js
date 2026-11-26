@@ -1281,7 +1281,7 @@ app.get(
 
 // BLOCK USER - ADMIN ONLY
 
-// BLOCK USER - ADMIN ONLY
+ // BLOCK USER - ADMIN ONLY
 app.patch(
   "/users/:id/block",
   authMiddleware,
@@ -1296,7 +1296,9 @@ app.patch(
         });
       }
 
-      const normalizedRole = (user.role || "").trim().toLowerCase();
+      const normalizedRole = String(user.role || "")
+        .trim()
+        .toLowerCase();
 
       if (normalizedRole === "admin") {
         return res.status(403).json({
@@ -1304,35 +1306,23 @@ app.patch(
         });
       }
 
-      if (user.isBlocked) {
-        return res.status(400).json({
-          message: "User already blocked",
-        });
-      }
-
-      // Update only isBlocked (avoid full document validation)
+      // Update only isBlocked field
       const result = await User.updateOne(
-        {
-          _id: user._id,
-          isBlocked: false
-        },
-        {
-          $set: {
-            isBlocked: true
-          }
-        }
+        { _id: user._id },
+        { $set: { isBlocked: true } },
+        { runValidators: false }
       );
 
-      if (result.modifiedCount === 0) {
-        return res.status(400).json({
-          message: "User could not be blocked",
+      if (result.matchedCount !== 1) {
+        return res.status(404).json({
+          message: "User not found during update",
         });
       }
 
       return res.status(200).json({
         message: `${normalizedRole} blocked successfully`,
         user: {
-          id: user._id,
+          _id: user._id,
           name: user.name,
           role: normalizedRole,
           isBlocked: true,
@@ -1343,7 +1333,7 @@ app.patch(
       console.error("Block user error:", error);
 
       return res.status(500).json({
-        message: error.message,
+        message: error.message || "Server error",
       });
     }
   }

@@ -109,19 +109,29 @@ function Users() {
 
       const data = await response.json();
 
+      // DEBUG RESPONSE
+      console.log("Status response:", response.status);
+      console.log("Server response:", data);
+
       if (!response.ok) {
         throw new Error(data.message || "Update failed");
       }
 
+      // UPDATE STATUS FROM BACKEND RESPONSE
       setUsers((oldUsers) =>
         oldUsers.map((user) =>
           user._id === userId
-            ? { ...user, isBlocked: !isBlocked }
+            ? {
+                ...user,
+                isBlocked:
+                  data.user?.isBlocked ?? !isBlocked,
+              }
             : user
         )
       );
+
     } catch (err) {
-      console.error(err);
+      console.error("Block/Unblock error:", err);
       setError(err.message || "Failed to update user");
     } finally {
       setActionLoading("");
@@ -335,7 +345,7 @@ function Users() {
 
                   {/* ACTION */}
                   <td>
-                    {user.role === "admin" ? (
+                    {(user.role || "").toLowerCase() === "admin" ? (
                       <span className="admin-protected">
                         Protected
                       </span>
