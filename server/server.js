@@ -1360,7 +1360,12 @@ app.patch(
         });
       }
 
+      // Normalize role
+      user.role = user.role.trim().toLowerCase();
+
+      // Unblock user
       user.isBlocked = false;
+
       await user.save();
 
       return res.status(200).json({
@@ -1383,7 +1388,7 @@ app.patch(
   }
 );
 
-
+// SERVER
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {
