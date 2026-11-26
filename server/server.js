@@ -1256,6 +1256,74 @@ app.get(
 );
 
 
+// GET ALL USERS - ADMIN ONLY
+app.get("/users", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Get users error:", error);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
+// BLOCK USER - ADMIN ONLY
+app.patch("/users/:id/block", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "admin") {
+      return res.status(403).json({ message: "Admin cannot be blocked" });
+    }
+
+    if (user.isBlocked) {
+      return res.status(400).json({ message: "User already blocked" });
+    }
+
+    user.isBlocked = true;
+    await user.save();
+
+    res.json({ message: "User blocked successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to block user" });
+  }
+});
+
+// UNBLOCK USER - ADMIN ONLY
+app.patch("/users/:id/unblock", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "admin") {
+      return res.status(403).json({ message: "Admin cannot be modified here" });
+    }
+
+    if (!user.isBlocked) {
+      return res.status(400).json({ message: "User is already active" });
+    }
+
+    user.isBlocked = false;
+    await user.save();
+
+    res.json({ message: "User unblocked successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to unblock user" });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {

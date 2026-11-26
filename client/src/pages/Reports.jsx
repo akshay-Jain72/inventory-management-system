@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Reports.css";
 
@@ -22,23 +23,28 @@ const Reports = () => {
   // USER / ROLE
   // ================================
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  const role = user?.role || "staff";
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  })();
+
+  const role = String(user?.role || "staff")
+    .toLowerCase()
+    .trim();
 
   const isAdmin = role === "admin";
   const isManager = role === "manager";
   const isStaff = role === "staff";
 
-  // Admin + Manager can see complete reports
-  const canViewFullReports = isAdmin || isManager;
+  // Admin: Full financial reports
+  // Manager: Operational reports + product prices
+  // Staff: Operational reports without prices
 
-  // ================================
-  // TOKEN
-  // ================================
-
-  const getToken = () => {
-    return localStorage.getItem("token");
-  };
+  const canViewPrice = isAdmin || isManager;
+  const canViewFinancialReports = isAdmin;
 
   // ================================
   // CURRENCY
@@ -52,24 +58,15 @@ const Reports = () => {
   };
 
   // ================================
-  // AUTH ERROR
+  // RESPONSE HANDLER
   // ================================
 
-  const handleAuthError = (responses) => {
-    const unauthorized = responses.some(
-      (response) =>
-        response.status === 401 || response.status === 403
-    );
-
-    if (unauthorized) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      navigate("/login");
-      return true;
+  const readResponse = async (response) => {
+    try {
+      return await response.json();
+    } catch {
+      return {};
     }
-
-    return false;
   };
 
   // ================================
@@ -77,41 +74,26 @@ const Reports = () => {
   // ================================
 
   const fetchReports = async (isRefresh = false) => {
-    const token = getToken();
+    const token = localStorage.getItem("token");
 
     if (!token) {
       navigate("/login");
       return;
     }
 
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
+    if (isRefresh) {
+      setRefreshing(true);
       setError("");
+    }
 
+    try {
       const headers = {
         Authorization: `Bearer ${token}`,
       };
 
-      /*
-        Staff:
-        - dashboard
-        - best-selling
-        - today-sales
-        - low-stock
-
-        Admin + Manager:
-        - dashboard
-        - monthly-revenue
-        - best-selling
-        - profit
-        - today-sales
-        - low-stock
-      */
+      // ================================
+      // REQUESTS
+      // ================================
 
       const requests = [
         fetch(`${API_URL}/dashboard`, {
@@ -119,8 +101,7 @@ const Reports = () => {
           headers,
         }),
 
-        // Full report only for admin + manager
-        ...(canViewFullReports
+        ...(canViewFinancialReports
           ? [
               fetch(`${API_URL}/monthly-revenue`, {
                 method: "GET",
@@ -134,8 +115,7 @@ const Reports = () => {
           headers,
         }),
 
-        // Full report only for admin + manager
-        ...(canViewFullReports
+        ...(canViewFinancialReports
           ? [
               fetch(`${API_URL}/profit`, {
                 method: "GET",
@@ -161,7 +141,15 @@ const Reports = () => {
       // AUTH CHECK
       // ================================
 
-      if (handleAuthError(responses)) {
+      const unauthorized = responses.some(
+        (response) => response.status === 401
+      );
+
+      if (unauthorized) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        navigate("/login");
         return;
       }
 
@@ -176,18 +164,17 @@ const Reports = () => {
       let monthlyResponse = null;
       let profitResponse = null;
 
-      if (canViewFullReports) {
+      if (canViewFinancialReports) {
         monthlyResponse = responses[index++];
       }
 
       const bestSellingResponse = responses[index++];
 
-      if (canViewFullReports) {
+      if (canViewFinancialReports) {
         profitResponse = responses[index++];
       }
 
       const todaySalesResponse = responses[index++];
-
       const lowStockResponse = responses[index++];
 
       // ================================
@@ -195,26 +182,26 @@ const Reports = () => {
       // ================================
 
       const dashboardData =
-        await dashboardResponse.json();
+        await readResponse(dashboardResponse);
 
       const bestSellingData =
-        await bestSellingResponse.json();
+        await readResponse(bestSellingResponse);
 
       const todaySalesData =
-        await todaySalesResponse.json();
+        await readResponse(todaySalesResponse);
 
       const lowStockData =
-        await lowStockResponse.json();
+        await readResponse(lowStockResponse);
 
       let monthlyData = null;
       let profitData = null;
 
-      if (canViewFullReports) {
+      if (canViewFinancialReports) {
         monthlyData =
-          await monthlyResponse.json();
+          await readResponse(monthlyResponse);
 
         profitData =
-          await profitResponse.json();
+          await readResponse(profitResponse);
       }
 
       // ================================
@@ -250,21 +237,21 @@ const Reports = () => {
       }
 
       if (
-        canViewFullReports &&
+        canViewFinancialReports &&
         !monthlyResponse.ok
       ) {
         throw new Error(
-          monthlyData.message ||
+          monthlyData?.message ||
             "Failed to load monthly report"
         );
       }
 
       if (
-        canViewFullReports &&
+        canViewFinancialReports &&
         !profitResponse.ok
       ) {
         throw new Error(
-          profitData.message ||
+          profitData?.message ||
             "Failed to load profit report"
         );
       }
@@ -278,26 +265,28 @@ const Reports = () => {
       setBestSelling(
         Array.isArray(bestSellingData)
           ? bestSellingData
-          : bestSellingData.products || []
+          : bestSellingData?.products || []
       );
 
       setTodaySales(todaySalesData);
-
       setLowStock(lowStockData);
 
-      // Admin + Manager only
-      if (canViewFullReports) {
+      // Admin financial reports only
+
+      if (canViewFinancialReports) {
         setMonthlyRevenue(monthlyData);
         setProfit(profitData);
       } else {
         setMonthlyRevenue(null);
         setProfit(null);
       }
-    } catch (error) {
-      console.log("Reports Error:", error);
+
+      setError("");
+    } catch (err) {
+      console.error("Reports Error:", err);
 
       setError(
-        error.message || "Failed to load reports"
+        err.message || "Failed to load reports"
       );
     } finally {
       setLoading(false);
@@ -310,7 +299,15 @@ const Reports = () => {
   // ================================
 
   useEffect(() => {
-    fetchReports();
+    const timer = setTimeout(() => {
+      fetchReports();
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ================================
@@ -318,40 +315,52 @@ const Reports = () => {
   // ================================
 
   const totalProducts =
-    dashboard?.totalProducts || 0;
+    dashboard?.totalProducts ?? 0;
 
   const totalCategories =
-    dashboard?.totalCategories || 0;
+    dashboard?.totalCategories ?? 0;
 
   const totalSales =
-    dashboard?.totalSales || 0;
+    dashboard?.totalSales ?? 0;
 
   const inventoryValue =
-    dashboard?.inventoryValue || 0;
+    dashboard?.inventoryValue ?? 0;
 
   const totalRevenue =
-    profit?.totalRevenue || 0;
+    profit?.totalRevenue ?? 0;
 
   const totalCost =
-    profit?.totalCost || 0;
+    profit?.totalCost ?? 0;
 
   const totalProfit =
-    profit?.totalProfit || 0;
+    profit?.totalProfit ?? 0;
 
   const lowStockCount =
-    lowStock?.count || 0;
+    lowStock?.count ??
+    (Array.isArray(lowStock)
+      ? lowStock.length
+      : 0);
 
   const todayOrders =
-    todaySales?.count || 0;
+    todaySales?.count ??
+    todaySales?.totalSales ??
+    todaySales?.totalOrders ??
+    0;
 
   const todayRevenue =
-    todaySales?.totalSales || 0;
+    todaySales?.totalRevenue ??
+    todaySales?.revenue ??
+    0;
 
   const monthlyOrders =
-    monthlyRevenue?.totalOrders || 0;
+    monthlyRevenue?.totalOrders ??
+    monthlyRevenue?.count ??
+    0;
 
   const monthlyTotalRevenue =
-    monthlyRevenue?.totalRevenue || 0;
+    monthlyRevenue?.totalRevenue ??
+    monthlyRevenue?.revenue ??
+    0;
 
   const profitDetails =
     Array.isArray(profit?.profitDetails)
@@ -361,7 +370,9 @@ const Reports = () => {
   const lowStockProducts =
     Array.isArray(lowStock?.products)
       ? lowStock.products
-      : [];
+      : Array.isArray(lowStock)
+        ? lowStock
+        : [];
 
   // ================================
   // LOADING
@@ -397,9 +408,10 @@ const Reports = () => {
 
           <button
             className="retry-btn"
-            onClick={() => fetchReports()}
+            onClick={() => fetchReports(true)}
+            disabled={refreshing}
           >
-            Try Again
+            {refreshing ? "Retrying..." : "Try Again"}
           </button>
         </div>
       </div>
@@ -416,7 +428,6 @@ const Reports = () => {
       {/* ================= HEADER ================= */}
 
       <div className="reports-header">
-
         <div>
           <span className="page-label">
             INVENTORY
@@ -434,17 +445,15 @@ const Reports = () => {
           onClick={() => fetchReports(true)}
           disabled={refreshing}
         >
-          {refreshing
-            ? "Refreshing..."
-            : "Refresh"}
+          {refreshing ? "Refreshing..." : "Refresh"}
         </button>
-
       </div>
 
       {/* ================= ROLE INFO ================= */}
 
       <div className="report-role">
         <span>Logged in as</span>
+
         <strong>{role}</strong>
 
         {isStaff && (
@@ -453,9 +462,15 @@ const Reports = () => {
           </small>
         )}
 
-        {canViewFullReports && (
+        {isManager && (
           <small>
-            Full business reports are available.
+            Inventory and operational reports are available.
+          </small>
+        )}
+
+        {isAdmin && (
+          <small>
+            All inventory and financial reports are available.
           </small>
         )}
       </div>
@@ -469,13 +484,14 @@ const Reports = () => {
         <div className="report-card">
           <div className="card-content">
             <p>Total Products</p>
+
             <h2>{totalProducts}</h2>
           </div>
         </div>
 
-        {/* Admin + Manager */}
+        {/* Admin Only */}
 
-        {canViewFullReports && (
+        {canViewFinancialReports && (
           <div className="report-card">
             <div className="card-content">
               <p>Total Revenue</p>
@@ -487,9 +503,9 @@ const Reports = () => {
           </div>
         )}
 
-        {/* Admin + Manager */}
+        {/* Admin Only */}
 
-        {canViewFullReports && (
+        {canViewFinancialReports && (
           <div className="report-card">
             <div className="card-content">
               <p>Total Profit</p>
@@ -506,6 +522,7 @@ const Reports = () => {
         <div className="report-card warning-card">
           <div className="card-content">
             <p>Low Stock</p>
+
             <h2>{lowStockCount}</h2>
           </div>
         </div>
@@ -515,7 +532,6 @@ const Reports = () => {
       {/* ================= TODAY'S REPORT ================= */}
 
       <div className="report-section">
-
         <div className="section-title">
           <div>
             <h2>Today's Sales</h2>
@@ -532,12 +548,13 @@ const Reports = () => {
 
           <div className="small-report-card">
             <span>Orders Today</span>
+
             <h3>{todayOrders}</h3>
           </div>
 
-          {/* Admin + Manager */}
+          {/* Admin Only */}
 
-          {canViewFullReports && (
+          {canViewFinancialReports && (
             <div className="small-report-card">
               <span>Today's Revenue</span>
 
@@ -547,9 +564,9 @@ const Reports = () => {
             </div>
           )}
 
-          {/* Admin + Manager */}
+          {/* Admin Only */}
 
-          {canViewFullReports && (
+          {canViewFinancialReports && (
             <div className="small-report-card">
               <span>Monthly Orders</span>
 
@@ -557,9 +574,9 @@ const Reports = () => {
             </div>
           )}
 
-          {/* Admin + Manager */}
+          {/* Admin Only */}
 
-          {canViewFullReports && (
+          {canViewFinancialReports && (
             <div className="small-report-card">
               <span>Monthly Revenue</span>
 
@@ -590,14 +607,14 @@ const Reports = () => {
           )}
 
         </div>
-
       </div>
 
       {/* ================= PROFIT REPORT ================= */}
 
-      {canViewFullReports && (
-        <div className="report-section">
+      {/* Admin Only */}
 
+      {canViewFinancialReports && (
+        <div className="report-section">
           <div className="section-title">
             <div>
               <h2>Profit Report</h2>
@@ -637,9 +654,7 @@ const Reports = () => {
           </div>
 
           <div className="table-container">
-
             <table>
-
               <thead>
                 <tr>
                   <th>Product</th>
@@ -653,7 +668,6 @@ const Reports = () => {
               </thead>
 
               <tbody>
-
                 {profitDetails.length === 0 ? (
                   <tr>
                     <td
@@ -668,16 +682,17 @@ const Reports = () => {
                     (item, index) => (
                       <tr
                         key={
-                          item.saleId || index
+                          item.saleId ||
+                          item._id ||
+                          index
                         }
                       >
-
                         <td>
                           {item.product || "-"}
                         </td>
 
                         <td>
-                          {item.quantity || 0}
+                          {item.quantity ?? 0}
                         </td>
 
                         <td>
@@ -715,25 +730,19 @@ const Reports = () => {
                             item.profit
                           )}
                         </td>
-
                       </tr>
                     )
                   )
                 )}
-
               </tbody>
-
             </table>
-
           </div>
-
         </div>
       )}
 
       {/* ================= BEST SELLING ================= */}
 
       <div className="report-section">
-
         <div className="section-title">
           <div>
             <h2>Best Selling Products</h2>
@@ -745,31 +754,39 @@ const Reports = () => {
         </div>
 
         <div className="table-container">
-
           <table>
-
             <thead>
               <tr>
                 <th>Rank</th>
                 <th>Product</th>
                 <th>Category</th>
-                <th>Price</th>
-                <th>Quantity Sold</th>
 
                 {/* Admin + Manager */}
-                {canViewFullReports && (
+
+                {canViewPrice && (
+                  <th>Price</th>
+                )}
+
+                <th>Quantity Sold</th>
+
+                {/* Admin Only */}
+
+                {canViewFinancialReports && (
                   <th>Revenue</th>
                 )}
               </tr>
             </thead>
 
             <tbody>
-
               {bestSelling.length === 0 ? (
                 <tr>
                   <td
                     colSpan={
-                      canViewFullReports ? 6 : 5
+                      canViewFinancialReports
+                        ? 6
+                        : canViewPrice
+                          ? 5
+                          : 4
                     }
                     className="empty-row"
                   >
@@ -779,19 +796,18 @@ const Reports = () => {
               ) : (
                 bestSelling.map(
                   (item, index) => {
-
                     const product =
-                      item.product;
+                      item.product || item;
 
                     return (
                       <tr
                         key={
                           product?.id ||
                           product?._id ||
+                          item._id ||
                           index
                         }
                       >
-
                         <td>
                           <span className="rank">
                             #{index + 1}
@@ -800,54 +816,62 @@ const Reports = () => {
 
                         <td>
                           {product?.name ||
+                            item.productName ||
                             "Unknown"}
                         </td>
 
                         <td>
                           {product?.category ||
+                            item.category ||
                             "-"}
                         </td>
 
-                        <td>
-                          {formatCurrency(
-                            product?.price
-                          )}
-                        </td>
-
-                        <td>
-                          {item.totalQuantity ||
-                            0}
-                        </td>
-
                         {/* Admin + Manager */}
-                        {canViewFullReports && (
+
+                        {canViewPrice && (
                           <td>
                             {formatCurrency(
-                              item.totalRevenue
+                              product?.price ??
+                                item.price ??
+                                item.sellingPrice ??
+                                0
                             )}
                           </td>
                         )}
 
+                        <td>
+                          {item.totalQuantity ??
+                            item.quantitySold ??
+                            item.quantity ??
+                            0}
+                        </td>
+
+                        {/* Admin Only */}
+
+                        {canViewFinancialReports && (
+                          <td>
+                            {formatCurrency(
+                              item.totalRevenue ??
+                                item.revenue ??
+                                item.totalAmount ??
+                                0
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   }
                 )
               )}
-
             </tbody>
-
           </table>
-
         </div>
-
       </div>
 
       {/* ================= LOW STOCK ================= */}
 
       <div className="report-section">
-
         <div className="section-title">
-
           <div>
             <h2>Low Stock Products</h2>
 
@@ -859,29 +883,33 @@ const Reports = () => {
           <span className="warning-count">
             {lowStockCount} Products
           </span>
-
         </div>
 
         <div className="table-container">
-
           <table>
-
             <thead>
               <tr>
                 <th>Product</th>
                 <th>SKU</th>
                 <th>Category</th>
-                <th>Price</th>
+
+                {/* Admin + Manager */}
+
+                {canViewPrice && (
+                  <th>Price</th>
+                )}
+
                 <th>Current Stock</th>
               </tr>
             </thead>
 
             <tbody>
-
               {lowStockProducts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan={
+                      canViewPrice ? 5 : 4
+                    }
                     className="empty-row"
                   >
                     No low stock products
@@ -889,13 +917,16 @@ const Reports = () => {
                 </tr>
               ) : (
                 lowStockProducts.map(
-                  (product) => (
+                  (product, index) => (
                     <tr
-                      key={product._id}
+                      key={
+                        product._id ||
+                        product.id ||
+                        index
+                      }
                     >
-
                       <td>
-                        {product.name}
+                        {product.name || "-"}
                       </td>
 
                       <td>
@@ -906,35 +937,33 @@ const Reports = () => {
                         {product.category || "-"}
                       </td>
 
-                      <td>
-                        {formatCurrency(
-                          product.price
-                        )}
-                      </td>
+                      {/* Admin + Manager */}
+
+                      {canViewPrice && (
+                        <td>
+                          {formatCurrency(
+                            product.price ?? 0
+                          )}
+                        </td>
+                      )}
 
                       <td>
                         <span className="stock-warning">
-                          {product.quantity}
+                          {product.quantity ?? 0}
                         </span>
                       </td>
-
                     </tr>
                   )
                 )
               )}
-
             </tbody>
-
           </table>
-
         </div>
-
       </div>
 
       {/* ================= INVENTORY SUMMARY ================= */}
 
       <div className="report-section">
-
         <div className="section-title">
           <div>
             <h2>Inventory Summary</h2>
@@ -977,9 +1006,9 @@ const Reports = () => {
             </strong>
           </div>
 
-          {/* Admin + Manager */}
+          {/* Admin Only */}
 
-          {canViewFullReports && (
+          {canViewFinancialReports && (
             <div className="inventory-item">
               <span>Inventory Value</span>
 
@@ -992,7 +1021,6 @@ const Reports = () => {
           )}
 
         </div>
-
       </div>
 
     </div>

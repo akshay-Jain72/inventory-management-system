@@ -18,6 +18,7 @@ import Purchases from "./pages/Purchases";
 import Sales from "./pages/Sales";
 import Suppliers from "./pages/Suppliers";
 import Reports from "./pages/Reports";
+import Users from "./pages/Users";
 
 import "./App.css";
 
@@ -211,6 +212,9 @@ const DashboardLayout = () => {
               />
             }
           />
+
+
+          <Route path="/users" element={<Users />} />
 
         </Routes>
 

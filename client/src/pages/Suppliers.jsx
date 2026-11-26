@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Suppliers.css";
 
@@ -26,95 +26,161 @@ const Suppliers = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // =========================
   // USER / ROLE
-  // =========================
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  })();
 
-  const user = JSON.parse(localStorage.getItem("user"));
   const token = localStorage.getItem("token");
+  const role = user?.role?.toLowerCase().trim() || "";
 
-  const role = user?.role;
+  const isAdmin = role === "admin";
+  const isManager = role === "manager";
+  const isStaff = role === "staff";
 
-  const canManageSuppliers =
-    role === "admin" || role === "manager";
+  const canManageSuppliers = isAdmin || isManager;
+  const canDeleteSupplier = isAdmin;
 
-  // =========================
-  // AUTH ERROR
-  // =========================
+  // RESPONSE JSON HANDLER
+  const readResponse = async (response) => {
+    const text = await response.text();
 
+    if (!text) return {};
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error("Invalid server response.");
+    }
+  };
+
+  // AUTH HANDLER
   const handleAuthError = (status) => {
-    if (status === 401 || status === 403) {
+    if (status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
       navigate("/login");
-
       return true;
     }
 
     return false;
   };
 
-  // =========================
   // FETCH SUPPLIERS
-  // =========================
-
-  const fetchSuppliers = async () => {
-    try {
+  const fetchSuppliers = async (showLoading = false) => {
+    if (showLoading) {
       setLoading(true);
-      setError("");
+    }
 
+    setError("");
+
+    try {
       if (!token) {
+        localStorage.removeItem("user");
         navigate("/login");
         return;
       }
 
-      const response = await fetch(
-        `${API_URL}/suppliers`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/suppliers`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (handleAuthError(response.status)) {
         return;
       }
 
-      if (!response.ok) {
-        setError(
-          data.message || "Failed to fetch suppliers"
-        );
-        return;
+      if (response.status === 403) {
+        throw new Error("You are not allowed to view suppliers.");
       }
 
-      setSuppliers(
-        Array.isArray(data) ? data : []
-      );
-    } catch (error) {
-      console.log(error);
-      setError("Server error. Please try again.");
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to fetch suppliers."
+        );
+      }
+
+      setSuppliers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message || "Server error. Please try again.");
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
-  // =========================
   // INITIAL LOAD
-  // =========================
-
   useEffect(() => {
-    fetchSuppliers();
-  }, []);
+    let cancelled = false;
 
-  // =========================
+    const loadSuppliers = async () => {
+      try {
+        if (!token) {
+          localStorage.removeItem("user");
+          navigate("/login");
+          return;
+        }
+
+        const response = await fetch(`${API_URL}/suppliers`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+
+        const data = await readResponse(response);
+
+        if (cancelled) return;
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
+          return;
+        }
+
+        if (response.status === 403) {
+          throw new Error("You are not allowed to view suppliers.");
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Failed to fetch suppliers."
+          );
+        }
+
+        setSuppliers(Array.isArray(data) ? data : []);
+        setError("");
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || "Server error.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadSuppliers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, navigate]);
+
   // INPUT CHANGE
-  // =========================
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -127,10 +193,7 @@ const Suppliers = () => {
     setMessage("");
   };
 
-  // =========================
   // RESET FORM
-  // =========================
-
   const resetForm = () => {
     setFormData({
       companyName: "",
@@ -141,16 +204,16 @@ const Suppliers = () => {
     });
 
     setEditingId(null);
+    setError("");
+    setMessage("");
   };
 
-  // =========================
   // ADD / UPDATE SUPPLIER
-  // =========================
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!canManageSuppliers) {
+      setError("You are not allowed to manage suppliers.");
       return;
     }
 
@@ -168,6 +231,11 @@ const Suppliers = () => {
       return;
     }
 
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
     try {
       setFormLoading(true);
 
@@ -182,6 +250,7 @@ const Suppliers = () => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          Accept: "application/json",
         },
         body: JSON.stringify({
           companyName: formData.companyName.trim(),
@@ -192,21 +261,23 @@ const Suppliers = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (handleAuthError(response.status)) {
         return;
       }
 
+      if (response.status === 403) {
+        throw new Error("You are not allowed to perform this action.");
+      }
+
       if (!response.ok) {
-        setError(
+        throw new Error(
           data.message ||
             (editingId
-              ? "Failed to update supplier"
-              : "Failed to add supplier")
+              ? "Failed to update supplier."
+              : "Failed to add supplier.")
         );
-
-        return;
       }
 
       setMessage(
@@ -219,26 +290,19 @@ const Suppliers = () => {
       resetForm();
 
       await fetchSuppliers();
-    } catch (error) {
-      console.log(error);
-      setError("Server error. Please try again.");
+    } catch (err) {
+      setError(err.message || "Server error. Please try again.");
     } finally {
       setFormLoading(false);
     }
   };
 
-  // =========================
   // EDIT SUPPLIER
-  // =========================
-
   const handleEdit = (supplier) => {
-    if (!canManageSuppliers) {
-      return;
-    }
+    if (!canManageSuppliers) return;
 
     setError("");
     setMessage("");
-
     setEditingId(supplier._id);
 
     setFormData({
@@ -255,20 +319,18 @@ const Suppliers = () => {
     });
   };
 
-  // =========================
-  // DELETE SUPPLIER
-  // =========================
-
+  // DELETE SUPPLIER - ADMIN ONLY
   const handleDelete = async (id) => {
-    if (!canManageSuppliers) {
-      return;
-    }
+    if (!canDeleteSupplier) return;
 
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this supplier?"
     );
 
-    if (!confirmDelete) {
+    if (!confirmDelete) return;
+
+    if (!token) {
+      navigate("/login");
       return;
     }
 
@@ -276,84 +338,77 @@ const Suppliers = () => {
       setError("");
       setMessage("");
 
-      const response = await fetch(
-        `${API_URL}/suppliers/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/suppliers/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (handleAuthError(response.status)) {
         return;
       }
 
-      if (!response.ok) {
-        setError(
-          data.message ||
-            "Failed to delete supplier"
-        );
-
-        return;
+      if (response.status === 403) {
+        throw new Error("You are not allowed to delete suppliers.");
       }
 
-      setMessage(
-        data.message ||
-          "Supplier deleted successfully."
-      );
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to delete supplier."
+        );
+      }
+
+      setMessage(data.message || "Supplier deleted successfully.");
 
       await fetchSuppliers();
-    } catch (error) {
-      console.log(error);
-      setError("Server error. Please try again.");
+    } catch (err) {
+      setError(err.message || "Server error. Please try again.");
     }
   };
 
-  // =========================
   // LOADING
-  // =========================
-
   if (loading) {
     return (
       <div className="suppliers-loading">
         <div className="loading-spinner"></div>
-
         <h2>Loading Suppliers...</h2>
       </div>
     );
   }
 
-  // =========================
-  // PAGE
-  // =========================
+  // ROLE VALIDATION
+  if (!user || (!isAdmin && !isManager && !isStaff)) {
+    return (
+      <div className="suppliers-page">
+        <h2>Invalid user role.</h2>
+        <button onClick={() => navigate("/login")}>
+          Login Again
+        </button>
+      </div>
+    );
+  }
 
+  // PAGE
   return (
     <div className="suppliers-page">
 
       {/* HEADER */}
-
       <div className="suppliers-header">
-
         <div>
           <h1>Suppliers</h1>
-
-          <p>
-            Manage and track your suppliers
-          </p>
+          <p>Manage and track your suppliers</p>
         </div>
 
         <div className="supplier-role">
-          Role: <strong>{role || "User"}</strong>
+          Role: <strong>{role}</strong>
         </div>
-
       </div>
 
       {/* MESSAGES */}
-
       {message && (
         <div className="supplier-success">
           {message}
@@ -366,18 +421,14 @@ const Suppliers = () => {
         </div>
       )}
 
-      {/* FORM - ADMIN + MANAGER ONLY */}
-
+      {/* FORM - ADMIN AND MANAGER */}
       {canManageSuppliers && (
         <div className="supplier-form-card">
 
           <div className="supplier-form-header">
-
             <div>
               <h2>
-                {editingId
-                  ? "Update Supplier"
-                  : "Add Supplier"}
+                {editingId ? "Update Supplier" : "Add Supplier"}
               </h2>
 
               <p>
@@ -386,21 +437,13 @@ const Suppliers = () => {
                   : "Add a new supplier"}
               </p>
             </div>
-
           </div>
 
           <form onSubmit={handleSubmit}>
-
             <div className="supplier-form-grid">
 
-              {/* COMPANY */}
-
               <div className="form-group">
-
-                <label>
-                  Company Name
-                </label>
-
+                <label>Company Name</label>
                 <input
                   type="text"
                   name="companyName"
@@ -409,17 +452,10 @@ const Suppliers = () => {
                   placeholder="Enter company name"
                   required
                 />
-
               </div>
 
-              {/* CONTACT */}
-
               <div className="form-group">
-
-                <label>
-                  Contact Person
-                </label>
-
+                <label>Contact Person</label>
                 <input
                   type="text"
                   name="contactPerson"
@@ -428,17 +464,10 @@ const Suppliers = () => {
                   placeholder="Enter contact person"
                   required
                 />
-
               </div>
 
-              {/* PHONE */}
-
               <div className="form-group">
-
-                <label>
-                  Phone
-                </label>
-
+                <label>Phone</label>
                 <input
                   type="text"
                   name="phone"
@@ -447,17 +476,10 @@ const Suppliers = () => {
                   placeholder="Enter phone number"
                   required
                 />
-
               </div>
 
-              {/* EMAIL */}
-
               <div className="form-group">
-
-                <label>
-                  Email
-                </label>
-
+                <label>Email</label>
                 <input
                   type="email"
                   name="email"
@@ -466,17 +488,10 @@ const Suppliers = () => {
                   placeholder="Enter email"
                   required
                 />
-
               </div>
 
-              {/* ADDRESS */}
-
               <div className="form-group full-width">
-
-                <label>
-                  Address
-                </label>
-
+                <label>Address</label>
                 <textarea
                   name="address"
                   value={formData.address}
@@ -485,15 +500,11 @@ const Suppliers = () => {
                   rows="3"
                   required
                 />
-
               </div>
-
             </div>
 
             {/* BUTTONS */}
-
             <div className="supplier-form-buttons">
-
               <button
                 type="submit"
                 className="save-supplier-btn"
@@ -516,56 +527,41 @@ const Suppliers = () => {
                   Cancel
                 </button>
               )}
-
             </div>
-
           </form>
-
         </div>
       )}
 
       {/* SUPPLIERS TABLE */}
-
       <div className="supplier-table-card">
 
         <div className="table-header">
-
           <div>
             <h2>All Suppliers</h2>
-
-            <p>
-              All supplier records
-            </p>
+            <p>All supplier records</p>
           </div>
 
           <span className="supplier-count">
             Total: {suppliers.length}
           </span>
 
+          <button
+            type="button"
+            onClick={() => fetchSuppliers(true)}
+          >
+            Refresh
+          </button>
         </div>
 
         {suppliers.length === 0 ? (
-
           <div className="no-suppliers">
-
-            <h3>
-              No Suppliers Found
-            </h3>
-
-            <p>
-              There are no suppliers in your system.
-            </p>
-
+            <h3>No Suppliers Found</h3>
+            <p>There are no suppliers in your system.</p>
           </div>
-
         ) : (
-
           <div className="table-container">
-
             <table>
-
               <thead>
-
                 <tr>
                   <th>#</th>
                   <th>Company Name</th>
@@ -574,96 +570,56 @@ const Suppliers = () => {
                   <th>Email</th>
                   <th>Address</th>
 
-                  {canManageSuppliers && (
-                    <th>Actions</th>
-                  )}
+                  {canManageSuppliers && <th>Actions</th>}
                 </tr>
-
               </thead>
 
               <tbody>
+                {suppliers.map((supplier, index) => (
+                  <tr key={supplier._id}>
+                    <td>{index + 1}</td>
 
-                {suppliers.map(
-                  (supplier, index) => (
+                    <td>
+                      <strong>{supplier.companyName}</strong>
+                    </td>
 
-                    <tr key={supplier._id}>
+                    <td>{supplier.contactPerson}</td>
+                    <td>{supplier.phone}</td>
+                    <td>{supplier.email}</td>
+                    <td>{supplier.address}</td>
 
+                    {canManageSuppliers && (
                       <td>
-                        {index + 1}
-                      </td>
+                        <div className="action-buttons">
+                          <button
+                            type="button"
+                            className="edit-btn"
+                            onClick={() => handleEdit(supplier)}
+                          >
+                            Edit
+                          </button>
 
-                      <td>
-                        <strong>
-                          {supplier.companyName}
-                        </strong>
-                      </td>
-
-                      <td>
-                        {supplier.contactPerson}
-                      </td>
-
-                      <td>
-                        {supplier.phone}
-                      </td>
-
-                      <td>
-                        {supplier.email}
-                      </td>
-
-                      <td>
-                        {supplier.address}
-                      </td>
-
-                      {canManageSuppliers && (
-                        <td>
-
-                          <div className="action-buttons">
-
+                          {canDeleteSupplier && (
                             <button
-                              className="edit-btn"
-                              onClick={() =>
-                                handleEdit(
-                                  supplier
-                                )
-                              }
-                            >
-                              Edit
-                            </button>
-
-                            <button
+                              type="button"
                               className="delete-btn"
-                              onClick={() =>
-                                handleDelete(
-                                  supplier._id
-                                )
-                              }
+                              onClick={() => handleDelete(supplier._id)}
                             >
                               Delete
                             </button>
-
-                          </div>
-
-                        </td>
-                      )}
-
-                    </tr>
-
-                  )
-                )}
-
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
               </tbody>
-
             </table>
-
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 };
 
 export default Suppliers;
-

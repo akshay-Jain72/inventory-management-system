@@ -1,13 +1,30 @@
-import React, { useEffect, useState } from "react";
+
+import { useEffect, useState } from "react";
 import "./Products.css";
+
+const API = "https://inventory-management-system-lzyk.onrender.com";
+
+function getUserRole() {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    return String(storedUser.role || "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
 
 const Products = () => {
   const [products, setProducts] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [showForm, setShowForm] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
+
+  const [editId, setEditId] = useState(null);
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -15,616 +32,631 @@ const Products = () => {
   const [quantity, setQuantity] = useState("");
   const [category, setCategory] = useState("");
 
-  const [formError, setFormError] = useState("");
-  const [formLoading, setFormLoading] = useState(false);
+  const [editData, setEditData] = useState({
+    name: "",
+    sku: "",
+    price: "",
+    quantity: "",
+    category: "",
+  });
 
-  // =========================
-  // Logged-in User
-  // =========================
+  const role = getUserRole();
 
-  const user = JSON.parse(
-    localStorage.getItem("user") || "null"
-  );
+  const isAdmin = role === "admin";
+  const isManager = role === "manager";
+  const isStaff = role === "staff";
 
-  // Admin and Manager can add products
-  // Staff can only view products
-  const canAddProduct =
-    user?.role === "admin" ||
-    user?.role === "manager";
+  const canAddProduct = isAdmin || isManager || isStaff;
+  const canEditProduct = isAdmin || isManager;
+  const canDeleteProduct = isAdmin;
+  const canViewPrice = isAdmin || isManager;
 
-  // =========================
-  // Fetch Products
-  // =========================
+  const token = localStorage.getItem("token");
 
+  // FETCH PRODUCTS
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    let cancelled = false;
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setError("Please login first");
-        return;
-      }
-
-      const response = await fetch(
-        "https://inventory-management-system-lzyk.onrender.com/products",
-        {
-          method: "GET",
+    async function loadProducts() {
+      try {
+        const response = await fetch(`${API}/products`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to fetch products");
         }
-      );
 
-      const data = await response.json();
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data.products)
+          ? data.products
+          : [];
 
-      // Token expired / unauthorized
-      if (
-        response.status === 401 ||
-        response.status === 403
-      ) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        window.location.href = "/login";
-        return;
+        if (!cancelled) {
+          setProducts(list);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setProducts([]);
+          setError(err.message || "Unable to fetch products");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-
-      if (!response.ok) {
-        setError(
-          data.message || "Failed to fetch products"
-        );
-        return;
-      }
-
-      setProducts(
-        Array.isArray(data) ? data : []
-      );
-
-    } catch (error) {
-      console.log("Products Error:", error);
-      setError(
-        "Server error. Please try again."
-      );
-    } finally {
-      setLoading(false);
     }
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey, token]);
+
+  // REFRESH
+  const refreshProducts = () => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    setRefreshKey((previous) => previous + 1);
   };
 
-  // =========================
-  // Add Product
-  // =========================
+  // RESET ADD FORM
+  const resetForm = () => {
+    setName("");
+    setSku("");
+    setPrice("");
+    setQuantity("");
+    setCategory("");
+  };
 
+  // ADD PRODUCT
   const handleAddProduct = async (e) => {
     e.preventDefault();
 
-    setFormError("");
-
-    // Frontend role protection
-    if (!canAddProduct) {
-      setFormError(
-        "You do not have permission to add products."
-      );
-      return;
-    }
-
-    // Required fields
     if (
       !name.trim() ||
       !sku.trim() ||
-      price === "" ||
-      quantity === "" ||
-      !category.trim()
+      !category.trim() ||
+      quantity === ""
     ) {
-      setFormError(
-        "All product fields are required"
-      );
+      setError("Please fill all required fields.");
       return;
     }
 
-    // Negative values
-    if (
-      Number(price) < 0 ||
-      Number(quantity) < 0
-    ) {
-      setFormError(
-        "Price and quantity cannot be negative"
-      );
+    if (canViewPrice && price === "") {
+      setError("Please enter product price.");
       return;
     }
+
+    if (
+      Number(quantity) < 0 ||
+      (canViewPrice && Number(price) < 0)
+    ) {
+      setError("Price and quantity cannot be negative.");
+      return;
+    }
+
+    setAdding(true);
+    setError("");
+    setSuccess("");
 
     try {
-      setFormLoading(true);
+      const productData = {
+        name: name.trim(),
+        sku: sku.trim(),
+        category: category.trim(),
+        quantity: Number(quantity),
+        price: canViewPrice ? Number(price) : 0,
+      };
 
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setFormError(
-          "Please login first"
-        );
-        return;
-      }
-
-      const response = await fetch(
-        "https://inventory-management-system-lzyk.onrender.com/products",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            name: name.trim(),
-            sku: sku.trim(),
-            price: Number(price),
-            quantity: Number(quantity),
-            category: category.trim(),
-          }),
-        }
-      );
+      const response = await fetch(`${API}/products`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(productData),
+      });
 
       const data = await response.json();
 
-      // Unauthorized / forbidden
-      if (
-        response.status === 401 ||
-        response.status === 403
-      ) {
-        setFormError(
-          data.message ||
-            "You do not have permission."
-        );
-        return;
-      }
-
-      // Other backend errors
       if (!response.ok) {
-        setFormError(
-          data.message ||
-            "Failed to create product"
-        );
-        return;
+        throw new Error(data.message || "Unable to add product");
       }
 
-      // Get latest products from backend
-      await fetchProducts();
-
-      // Reset form
-      setName("");
-      setSku("");
-      setPrice("");
-      setQuantity("");
-      setCategory("");
-
-      setShowForm(false);
-      setFormError("");
-
-    } catch (error) {
-      console.log(
-        "Add Product Error:",
-        error
-      );
-
-      setFormError(
-        "Server error. Please try again."
-      );
+      resetForm();
+      setSuccess("Product added successfully!");
+      refreshProducts();
+    } catch (err) {
+      setError(err.message || "Failed to add product");
     } finally {
-      setFormLoading(false);
+      setAdding(false);
     }
   };
 
-  // =========================
-  // Stock Status
-  // =========================
+  // OPEN EDIT
+  const handleEdit = (product) => {
+    setError("");
+    setSuccess("");
+    setEditId(product._id);
 
-  const getStockStatus = (quantity) => {
-    const stock = Number(quantity || 0);
-
-    if (stock === 0) {
-      return {
-        text: "Out of Stock",
-        className: "stock-out",
-      };
-    }
-
-    if (stock <= 5) {
-      return {
-        text: "Low Stock",
-        className: "stock-low",
-      };
-    }
-
-    return {
-      text: "In Stock",
-      className: "stock-good",
-    };
+    setEditData({
+      name: product.name || "",
+      sku: product.sku || "",
+      price: product.price ?? "",
+      quantity: product.quantity ?? "",
+      category: product.category || "",
+    });
   };
 
-  // =========================
-  // Loading
-  // =========================
+  // CANCEL EDIT
+  const cancelEdit = () => {
+    setEditId(null);
 
-  if (loading) {
-    return (
-      <div className="products-loading">
+    setEditData({
+      name: "",
+      sku: "",
+      price: "",
+      quantity: "",
+      category: "",
+    });
+  };
 
-        <div className="loading-spinner"></div>
+  // UPDATE PRODUCT
+  const handleUpdate = async (e) => {
+    e.preventDefault();
 
-        <h2>
-          Loading Products...
-        </h2>
+    if (
+      !editData.name.trim() ||
+      !editData.sku.trim() ||
+      !editData.category.trim() ||
+      editData.price === "" ||
+      editData.quantity === ""
+    ) {
+      setError("Please fill all edit fields.");
+      return;
+    }
 
-      </div>
+    if (
+      Number(editData.price) < 0 ||
+      Number(editData.quantity) < 0
+    ) {
+      setError("Price and quantity cannot be negative.");
+      return;
+    }
+
+    setSavingEdit(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch(`${API}/products/${editId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: editData.name.trim(),
+          sku: editData.sku.trim(),
+          category: editData.category.trim(),
+          price: Number(editData.price),
+          quantity: Number(editData.quantity),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to update product");
+      }
+
+      cancelEdit();
+      setSuccess("Product updated successfully!");
+      refreshProducts();
+    } catch (err) {
+      setError(err.message || "Failed to update product");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // DELETE PRODUCT
+  const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this product?"
     );
-  }
 
-  // =========================
-  // UI
-  // =========================
+    if (!confirmed) return;
+
+    setDeletingId(id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch(`${API}/products/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to delete product");
+      }
+
+      setSuccess("Product deleted successfully!");
+      refreshProducts();
+    } catch (err) {
+      setError(err.message || "Failed to delete product");
+    } finally {
+      setDeletingId("");
+    }
+  };
+
+  // STOCK STATUS
+  const getStockStatus = (qty) => {
+    if (qty <= 0) return "out";
+    if (qty <= 5) return "low";
+    return "available";
+  };
 
   return (
     <div className="products-page">
 
-      {/* =========================
-          Header
-      ========================= */}
-
+      {/* HEADER */}
       <div className="products-header">
-
         <div>
           <h1>Products</h1>
-
-          <p>
-            Manage your inventory products
-          </p>
+          <p>Manage your inventory products</p>
         </div>
 
-        {/* Only Admin / Manager */}
-
-        {canAddProduct && (
-          <button
-            className="add-product-button"
-            onClick={() => {
-              setShowForm(!showForm);
-              setFormError("");
-            }}
-          >
-            {showForm
-              ? "Close Form"
-              : "+ Add Product"}
-          </button>
-        )}
-
+        <button
+          className="products-refresh-btn"
+          onClick={refreshProducts}
+          disabled={loading}
+        >
+          {loading ? "Loading..." : "Refresh"}
+        </button>
       </div>
 
-      {/* =========================
-          General Error
-      ========================= */}
-
+      {/* ERROR */}
       {error && (
-        <div className="products-error">
-          {error}
+        <div className="products-alert products-error">
+          <span>{error}</span>
+          <button onClick={() => setError("")}>×</button>
         </div>
       )}
 
-      {/* =========================
-          Add Product Form
-      ========================= */}
+      {/* SUCCESS */}
+      {success && (
+        <div className="products-alert products-success">
+          <span>{success}</span>
+          <button onClick={() => setSuccess("")}>×</button>
+        </div>
+      )}
 
-      {showForm && canAddProduct && (
-        <div className="product-form-container">
+      {/* ADD PRODUCT */}
+      {canAddProduct && (
+        <section className="products-form-card">
+          <h2>Add New Product</h2>
 
-          <div className="form-header">
+          <form onSubmit={handleAddProduct}>
+            <div className="products-form-grid">
 
-            <div>
-
-              <h2>
-                Add New Product
-              </h2>
-
-              <p>
-                Enter the product details below
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* Form Error */}
-
-          {formError && (
-            <div className="form-error">
-              {formError}
-            </div>
-          )}
-
-          <form
-            onSubmit={handleAddProduct}
-          >
-
-            <div className="product-form-grid">
-
-              {/* Product Name */}
-
-              <div className="product-form-group">
-
-                <label>
-                  Product Name
-                  <span>*</span>
-                </label>
-
+              <div className="products-field">
+                <label>Product Name</label>
                 <input
                   type="text"
                   placeholder="Enter product name"
                   value={name}
-                  onChange={(e) =>
-                    setName(e.target.value)
-                  }
+                  onChange={(e) => setName(e.target.value)}
+                  required
                 />
-
               </div>
 
-              {/* SKU */}
-
-              <div className="product-form-group">
-
-                <label>
-                  SKU
-                  <span>*</span>
-                </label>
-
+              <div className="products-field">
+                <label>SKU</label>
                 <input
                   type="text"
                   placeholder="Enter SKU"
                   value={sku}
-                  onChange={(e) =>
-                    setSku(e.target.value)
-                  }
+                  onChange={(e) => setSku(e.target.value)}
+                  required
                 />
-
               </div>
 
-              {/* Price */}
+              {canViewPrice && (
+                <div className="products-field">
+                  <label>Price</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter price"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
 
-              <div className="product-form-group">
-
-                <label>
-                  Price
-                  <span>*</span>
-                </label>
-
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Enter price"
-                  value={price}
-                  onChange={(e) =>
-                    setPrice(e.target.value)
-                  }
-                />
-
-              </div>
-
-              {/* Quantity */}
-
-              <div className="product-form-group">
-
-                <label>
-                  Quantity
-                  <span>*</span>
-                </label>
-
+              <div className="products-field">
+                <label>Quantity</label>
                 <input
                   type="number"
                   min="0"
                   placeholder="Enter quantity"
                   value={quantity}
-                  onChange={(e) =>
-                    setQuantity(e.target.value)
-                  }
+                  onChange={(e) => setQuantity(e.target.value)}
+                  required
                 />
-
               </div>
 
-              {/* Category */}
-
-              <div className="product-form-group">
-
-                <label>
-                  Category
-                  <span>*</span>
-                </label>
-
+              <div className="products-field">
+                <label>Category</label>
                 <input
                   type="text"
                   placeholder="Enter category"
                   value={category}
-                  onChange={(e) =>
-                    setCategory(e.target.value)
-                  }
+                  onChange={(e) => setCategory(e.target.value)}
+                  required
                 />
-
               </div>
 
             </div>
 
-            {/* Form Buttons */}
+            <button
+              type="submit"
+              className="products-add-btn"
+              disabled={adding}
+            >
+              {adding ? "Adding..." : "Add Product"}
+            </button>
+          </form>
+        </section>
+      )}
 
-            <div className="form-actions">
+      {/* EDIT PRODUCT */}
+      {editId && canEditProduct && (
+        <section className="products-form-card products-edit-card">
+          <h2>Edit Product</h2>
 
-              <button
-                type="button"
-                className="cancel-button"
-                onClick={() => {
-                  setShowForm(false);
-                  setFormError("");
-                }}
-              >
-                Cancel
-              </button>
+          <form onSubmit={handleUpdate}>
+            <div className="products-form-grid">
 
-              <button
-                type="submit"
-                className="save-product-button"
-                disabled={formLoading}
-              >
-                {formLoading
-                  ? "Saving..."
-                  : "Save Product"}
-              </button>
+              <div className="products-field">
+                <label>Product Name</label>
+                <input
+                  type="text"
+                  value={editData.name}
+                  onChange={(e) =>
+                    setEditData((previous) => ({
+                      ...previous,
+                      name: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="products-field">
+                <label>SKU</label>
+                <input
+                  type="text"
+                  value={editData.sku}
+                  onChange={(e) =>
+                    setEditData((previous) => ({
+                      ...previous,
+                      sku: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="products-field">
+                <label>Price</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editData.price}
+                  onChange={(e) =>
+                    setEditData((previous) => ({
+                      ...previous,
+                      price: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="products-field">
+                <label>Quantity</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editData.quantity}
+                  onChange={(e) =>
+                    setEditData((previous) => ({
+                      ...previous,
+                      quantity: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="products-field">
+                <label>Category</label>
+                <input
+                  type="text"
+                  value={editData.category}
+                  onChange={(e) =>
+                    setEditData((previous) => ({
+                      ...previous,
+                      category: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
 
             </div>
 
-          </form>
+            <div className="products-edit-actions">
+              <button
+                type="submit"
+                className="products-add-btn"
+                disabled={savingEdit}
+              >
+                {savingEdit ? "Updating..." : "Update Product"}
+              </button>
 
-        </div>
+              <button
+                type="button"
+                className="products-cancel-btn"
+                onClick={cancelEdit}
+                disabled={savingEdit}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </section>
       )}
 
-      {/* =========================
-          Products Table
-      ========================= */}
-
-      <div className="products-table-container">
-
-        {/* Table Header */}
+      {/* PRODUCT LIST */}
+      <section className="products-table-card">
 
         <div className="products-table-header">
-
           <div>
-
-            <h2>
-              All Products
-            </h2>
-
-            <p>
-              View all products in your inventory
-            </p>
-
+            <h2>Product Inventory</h2>
+            <p>{products.length} products found</p>
           </div>
-
-          <span className="product-count">
-            Total: {products.length}
-          </span>
-
         </div>
 
-        {/* No Products */}
-
-        {products.length === 0 ? (
-
-          <div className="no-products">
-
-            <h3>
-              No Products Found
-            </h3>
-
-            <p>
-              There are no products in your inventory.
-            </p>
-
+        {loading ? (
+          <div className="products-loading">
+            Loading products...
           </div>
-
+        ) : products.length === 0 ? (
+          <div className="products-empty">
+            <h3>No products found</h3>
+            <p>Add your first product to get started.</p>
+          </div>
         ) : (
-
           <div className="products-table-wrapper">
-
             <table className="products-table">
 
               <thead>
-
                 <tr>
-
-                  <th>#</th>
-                  <th>Name</th>
+                  <th>Product</th>
                   <th>SKU</th>
                   <th>Category</th>
-                  <th>Price</th>
                   <th>Quantity</th>
+
+                  {canViewPrice && <th>Price</th>}
+
                   <th>Status</th>
 
+                  {(canEditProduct || canDeleteProduct) && (
+                    <th>Actions</th>
+                  )}
                 </tr>
-
               </thead>
 
               <tbody>
+                {products.map((product) => {
+                  const status = getStockStatus(
+                    Number(product.quantity)
+                  );
 
-                {products.map(
-                  (product, index) => {
+                  return (
+                    <tr key={product._id}>
 
-                    const stockStatus =
-                      getStockStatus(
-                        product.quantity
-                      );
+                      <td className="products-name-cell">
+                        {product.name}
+                      </td>
 
-                    return (
+                      <td>{product.sku}</td>
 
-                      <tr
-                        key={product._id}
-                      >
+                      <td>{product.category}</td>
 
-                        <td>
-                          {index + 1}
-                        </td>
+                      <td>{product.quantity}</td>
 
-                        <td>
-                          <strong>
-                            {product.name}
-                          </strong>
-                        </td>
-
-                        <td>
-                          {product.sku}
-                        </td>
-
-                        <td>
-                          {product.category}
-                        </td>
-
+                      {canViewPrice && (
                         <td>
                           ₹
-                          {Number(
-                            product.price || 0
-                          ).toFixed(2)}
+                          {Number(product.price || 0).toLocaleString(
+                            "en-IN"
+                          )}
                         </td>
+                      )}
 
-                        <td>
-                          {product.quantity}
+                      <td>
+                        <span
+                          className={`products-stock-badge ${status}`}
+                        >
+                          {status === "available"
+                            ? "In Stock"
+                            : status === "low"
+                            ? "Low Stock"
+                            : "Out of Stock"}
+                        </span>
+                      </td>
+
+                      {(canEditProduct || canDeleteProduct) && (
+                        <td className="products-actions-cell">
+
+                          {canEditProduct && (
+                            <button
+                              className="products-edit-btn"
+                              onClick={() => handleEdit(product)}
+                            >
+                              Edit
+                            </button>
+                          )}
+
+                          {canDeleteProduct && (
+                            <button
+                              className="products-delete-btn"
+                              onClick={() =>
+                                handleDelete(product._id)
+                              }
+                              disabled={
+                                deletingId === product._id
+                              }
+                            >
+                              {deletingId === product._id
+                                ? "Deleting..."
+                                : "Delete"}
+                            </button>
+                          )}
+
                         </td>
+                      )}
 
-                        <td>
-
-                          <span
-                            className={`stock-status ${stockStatus.className}`}
-                          >
-                            {stockStatus.text}
-                          </span>
-
-                        </td>
-
-                      </tr>
-
-                    );
-                  }
-                )}
-
+                    </tr>
+                  );
+                })}
               </tbody>
 
             </table>
-
           </div>
-
         )}
-
-      </div>
-
+      </section>
     </div>
   );
 };

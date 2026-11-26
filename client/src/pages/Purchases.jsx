@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import  { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Purchases.css";
 
@@ -25,26 +26,39 @@ const Purchases = () => {
     purchasePrice: "",
   });
 
-  // =========================
   // USER / ROLE
-  // =========================
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  })();
 
-  const user = JSON.parse(localStorage.getItem("user"));
   const token = localStorage.getItem("token");
-  const role = user?.role;
+  const role = user?.role?.toLowerCase().trim() || "";
 
   const canManagePurchases =
-    role === "admin" || role === "manager";
+  role === "admin" || role === "manager";
 
-  // =========================
-  // AUTH CHECK
-  // =========================
+const canDeletePurchase = role === "admin";
 
+  // SAFE RESPONSE PARSING
+  const readResponse = async (response) => {
+    const text = await response.text();
+
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  // AUTH HANDLING
   const handleAuthError = (status) => {
-    if (status === 401 || status === 403) {
+    if (status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
       navigate("/login");
       return true;
     }
@@ -52,24 +66,18 @@ const Purchases = () => {
     return false;
   };
 
-  // =========================
   // FETCH PURCHASES
-  // =========================
-
   const fetchPurchases = async () => {
     try {
       const response = await fetch(`${API_URL}/purchases`, {
-        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
-      if (handleAuthError(response.status)) {
-        return;
-      }
+      if (handleAuthError(response.status)) return;
 
       if (!response.ok) {
         setError(data.message || "Failed to load purchases");
@@ -77,30 +85,24 @@ const Purchases = () => {
       }
 
       setPurchases(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.log(error);
-      setError("Server error. Please try again.");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load purchases. Please try again.");
     }
   };
 
-  // =========================
   // FETCH PRODUCTS
-  // =========================
-
   const fetchProducts = async () => {
     try {
       const response = await fetch(`${API_URL}/products`, {
-        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
-      if (handleAuthError(response.status)) {
-        return;
-      }
+      if (handleAuthError(response.status)) return;
 
       if (!response.ok) {
         setError(data.message || "Failed to load products");
@@ -108,30 +110,24 @@ const Purchases = () => {
       }
 
       setProducts(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.log(error);
-      setError("Failed to load products");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load products.");
     }
   };
 
-  // =========================
   // FETCH SUPPLIERS
-  // =========================
-
   const fetchSuppliers = async () => {
     try {
       const response = await fetch(`${API_URL}/suppliers`, {
-        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
-      if (handleAuthError(response.status)) {
-        return;
-      }
+      if (handleAuthError(response.status)) return;
 
       if (!response.ok) {
         setError(data.message || "Failed to load suppliers");
@@ -139,25 +135,21 @@ const Purchases = () => {
       }
 
       setSuppliers(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.log(error);
-      setError("Failed to load suppliers");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load suppliers.");
     }
   };
 
-  // =========================
   // INITIAL LOAD
-  // =========================
-
   useEffect(() => {
+    let cancelled = false;
+
     const loadData = async () => {
       if (!token) {
         navigate("/login");
         return;
       }
-
-      setLoading(true);
-      setError("");
 
       await Promise.all([
         fetchPurchases(),
@@ -165,16 +157,22 @@ const Purchases = () => {
         fetchSuppliers(),
       ]);
 
-      setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+      }
     };
 
     loadData();
-  }, []);
 
-  // =========================
+    return () => {
+      cancelled = true;
+    };
+
+    // Initial load for the current token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, navigate]);
+
   // INPUT CHANGE
-  // =========================
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -187,10 +185,7 @@ const Purchases = () => {
     setError("");
   };
 
-  // =========================
   // RESET FORM
-  // =========================
-
   const resetForm = () => {
     setFormData({
       productId: "",
@@ -201,39 +196,40 @@ const Purchases = () => {
 
     setEditingId(null);
     setMessage("");
+    setError("");
   };
 
-  // =========================
   // SUBMIT PURCHASE
-  // =========================
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!canManagePurchases) {
+      setError("You do not have permission to manage purchases.");
       return;
     }
 
     setMessage("");
     setError("");
 
-    // Validation
     if (
       !formData.productId ||
       !formData.supplierId ||
-      !formData.quantity ||
+      formData.quantity === "" ||
       formData.purchasePrice === ""
     ) {
       setError("All fields are required.");
       return;
     }
 
-    if (Number(formData.quantity) <= 0) {
+    const quantity = Number(formData.quantity);
+    const purchasePrice = Number(formData.purchasePrice);
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
       setError("Quantity must be greater than 0.");
       return;
     }
 
-    if (Number(formData.purchasePrice) < 0) {
+    if (!Number.isFinite(purchasePrice) || purchasePrice < 0) {
       setError("Purchase price cannot be negative.");
       return;
     }
@@ -241,34 +237,24 @@ const Purchases = () => {
     try {
       setFormLoading(true);
 
-      let url;
-      let method;
-      let body;
+      const url = editingId
+        ? `${API_URL}/purchases/${editingId}`
+        : `${API_URL}/purchases`;
 
-      // UPDATE
-      if (editingId) {
-        url = `${API_URL}/purchases/${editingId}`;
-        method = "PUT";
+      const method = editingId ? "PUT" : "POST";
 
-        body = {
-          supplierId: formData.supplierId,
-          quantity: Number(formData.quantity),
-          purchasePrice: Number(formData.purchasePrice),
-        };
-      }
-
-      // CREATE
-      else {
-        url = `${API_URL}/purchases`;
-        method = "POST";
-
-        body = {
-          productId: formData.productId,
-          supplierId: formData.supplierId,
-          quantity: Number(formData.quantity),
-          purchasePrice: Number(formData.purchasePrice),
-        };
-      }
+      const body = editingId
+        ? {
+            supplierId: formData.supplierId,
+            quantity,
+            purchasePrice,
+          }
+        : {
+            productId: formData.productId,
+            supplierId: formData.supplierId,
+            quantity,
+            purchasePrice,
+          };
 
       const response = await fetch(url, {
         method,
@@ -279,18 +265,16 @@ const Purchases = () => {
         body: JSON.stringify(body),
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
-      if (handleAuthError(response.status)) {
-        return;
-      }
+      if (handleAuthError(response.status)) return;
 
       if (!response.ok) {
         setError(
           data.message ||
             (editingId
-              ? "Failed to update purchase"
-              : "Failed to add purchase")
+              ? "Failed to update purchase."
+              : "Failed to add purchase.")
         );
         return;
       }
@@ -304,28 +288,24 @@ const Purchases = () => {
 
       resetForm();
 
-      await fetchPurchases();
-      await fetchProducts();
-    } catch (error) {
-      console.log(error);
+      await Promise.all([
+        fetchPurchases(),
+        fetchProducts(),
+      ]);
+    } catch (err) {
+      console.error(err);
       setError("Server error. Please try again.");
     } finally {
       setFormLoading(false);
     }
   };
 
-  // =========================
   // EDIT PURCHASE
-  // =========================
-
   const handleEdit = (purchase) => {
-    if (!canManagePurchases) {
-      return;
-    }
+    if (!canManagePurchases) return;
 
-    setError("");
     setMessage("");
-
+    setError("");
     setEditingId(purchase._id);
 
     setFormData({
@@ -339,10 +319,9 @@ const Purchases = () => {
         purchase.supplier ||
         "",
 
-      quantity: purchase.quantity || "",
+      quantity: purchase.quantity ?? "",
 
-      purchasePrice:
-        purchase.purchasePrice ?? "",
+      purchasePrice: purchase.purchasePrice ?? "",
     });
 
     window.scrollTo({
@@ -351,67 +330,54 @@ const Purchases = () => {
     });
   };
 
-  // =========================
   // DELETE PURCHASE
-  // =========================
+ const handleDelete = async (id) => {
+  if (!canDeletePurchase) {
+    setError("Only Admin can delete purchases.");
+    return;
+  }
 
-  const handleDelete = async (id) => {
-    if (!canManagePurchases) {
-      return;
-    }
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this purchase?"
+  );
 
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this purchase?"
-    );
+  if (!confirmDelete) return;
 
-    if (!confirmDelete) {
-      return;
-    }
+  // Baaki tumhara existing delete function same rahega
 
     try {
       setError("");
       setMessage("");
 
-      const response = await fetch(
-        `${API_URL}/purchases/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/purchases/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
-      if (handleAuthError(response.status)) {
-        return;
-      }
+      if (handleAuthError(response.status)) return;
 
       if (!response.ok) {
-        setError(
-          data.message || "Failed to delete purchase"
-        );
+        setError(data.message || "Failed to delete purchase.");
         return;
       }
 
-      setMessage(
-        data.message ||
-          "Purchase deleted successfully."
-      );
+      setMessage(data.message || "Purchase deleted successfully.");
 
-      await fetchPurchases();
-      await fetchProducts();
-    } catch (error) {
-      console.log(error);
+      await Promise.all([
+        fetchPurchases(),
+        fetchProducts(),
+      ]);
+    } catch (err) {
+      console.error(err);
       setError("Server error. Please try again.");
     }
   };
 
-  // =========================
   // LOADING
-  // =========================
-
   if (loading) {
     return (
       <div className="purchases-loading">
@@ -421,40 +387,24 @@ const Purchases = () => {
     );
   }
 
-  // =========================
   // PAGE
-  // =========================
-
   return (
     <div className="purchases-page">
-
-      {/* =========================
-          HEADER
-      ========================= */}
-
+      {/* HEADER */}
       <div className="purchases-header">
-
         <div>
           <h1>Purchases</h1>
-
-          <p>
-            Manage and track your purchase records
-          </p>
+          <p>Manage and track your purchase records</p>
         </div>
 
         <div className="purchase-summary">
           <span>
-            Total Purchases:{" "}
-            <strong>{purchases.length}</strong>
+            Total Purchases: <strong>{purchases.length}</strong>
           </span>
         </div>
-
       </div>
 
-      {/* =========================
-          MESSAGES
-      ========================= */}
-
+      {/* MESSAGES */}
       {message && (
         <div className="purchase-success">
           {message}
@@ -467,21 +417,13 @@ const Purchases = () => {
         </div>
       )}
 
-      {/* =========================
-          FORM
-          ADMIN + MANAGER ONLY
-      ========================= */}
-
+      {/* FORM: ADMIN + MANAGER */}
       {canManagePurchases && (
         <div className="purchase-form-card">
-
           <div className="purchase-form-header">
-
             <div>
               <h2>
-                {editingId
-                  ? "Update Purchase"
-                  : "Add New Purchase"}
+                {editingId ? "Update Purchase" : "Add New Purchase"}
               </h2>
 
               <p>
@@ -490,17 +432,12 @@ const Purchases = () => {
                   : "Add new stock to your inventory"}
               </p>
             </div>
-
           </div>
 
           <form onSubmit={handleSubmit}>
-
             <div className="purchase-form-grid">
-
               {/* PRODUCT */}
-
               <div className="form-group">
-
                 <label>Product</label>
 
                 <select
@@ -510,35 +447,24 @@ const Purchases = () => {
                   disabled={editingId !== null}
                   required
                 >
-
-                  <option value="">
-                    Select Product
-                  </option>
+                  <option value="">Select Product</option>
 
                   {products.map((product) => (
-                    <option
-                      key={product._id}
-                      value={product._id}
-                    >
+                    <option key={product._id} value={product._id}>
                       {product.name}
                     </option>
                   ))}
-
                 </select>
 
                 {editingId && (
                   <small className="input-help">
-                    Product cannot be changed while
-                    editing a purchase.
+                    Product cannot be changed while editing.
                   </small>
                 )}
-
               </div>
 
               {/* SUPPLIER */}
-
               <div className="form-group">
-
                 <label>Supplier</label>
 
                 <select
@@ -547,28 +473,18 @@ const Purchases = () => {
                   onChange={handleChange}
                   required
                 >
-
-                  <option value="">
-                    Select Supplier
-                  </option>
+                  <option value="">Select Supplier</option>
 
                   {suppliers.map((supplier) => (
-                    <option
-                      key={supplier._id}
-                      value={supplier._id}
-                    >
+                    <option key={supplier._id} value={supplier._id}>
                       {supplier.companyName}
                     </option>
                   ))}
-
                 </select>
-
               </div>
 
               {/* QUANTITY */}
-
               <div className="form-group">
-
                 <label>Quantity</label>
 
                 <input
@@ -578,15 +494,13 @@ const Purchases = () => {
                   value={formData.quantity}
                   onChange={handleChange}
                   min="1"
+                  step="1"
                   required
                 />
-
               </div>
 
               {/* PURCHASE PRICE */}
-
               <div className="form-group">
-
                 <label>Purchase Price</label>
 
                 <input
@@ -599,15 +513,11 @@ const Purchases = () => {
                   step="0.01"
                   required
                 />
-
               </div>
-
             </div>
 
             {/* BUTTONS */}
-
             <div className="purchase-form-buttons">
-
               <button
                 type="submit"
                 className="save-purchase-btn"
@@ -630,55 +540,33 @@ const Purchases = () => {
                   Cancel
                 </button>
               )}
-
             </div>
-
           </form>
-
         </div>
       )}
 
-      {/* =========================
-          PURCHASE HISTORY
-          EVERYONE CAN VIEW
-      ========================= */}
-
+      {/* PURCHASE HISTORY */}
       <div className="purchase-table-card">
-
         <div className="table-header">
-
           <div>
             <h2>Purchase History</h2>
-
-            <p>
-              All purchase transactions
-            </p>
+            <p>All purchase transactions</p>
           </div>
 
           <span className="purchase-count">
             {purchases.length} Records
           </span>
-
         </div>
 
         {purchases.length === 0 ? (
-
           <div className="no-data">
             <h3>No Purchases Found</h3>
-
-            <p>
-              No purchase records are available.
-            </p>
+            <p>No purchase records are available.</p>
           </div>
-
         ) : (
-
           <div className="table-container">
-
             <table>
-
               <thead>
-
                 <tr>
                   <th>#</th>
                   <th>Product</th>
@@ -688,128 +576,86 @@ const Purchases = () => {
                   <th>Total Amount</th>
                   <th>Date</th>
 
-                  {canManagePurchases && (
-                    <th>Actions</th>
-                  )}
+                  {canManagePurchases && <th>Actions</th>}
                 </tr>
-
               </thead>
 
               <tbody>
+                {purchases.map((purchase, index) => (
+                  <tr key={purchase._id}>
+                    <td>{index + 1}</td>
 
-                {purchases.map(
-                  (purchase, index) => (
+                    <td>
+                      <strong>
+                        {purchase.product?.name || "Product deleted"}
+                      </strong>
+                    </td>
 
-                    <tr key={purchase._id}>
+                    <td>
+                      {purchase.supplier?.companyName ||
+                        "Supplier deleted"}
+                    </td>
 
-                      {/* NUMBER */}
+                    <td>{purchase.quantity}</td>
 
-                      <td>
-                        {index + 1}
-                      </td>
+                    <td>
+                      ₹
+                      {Number(
+                        purchase.purchasePrice || 0
+                      ).toFixed(2)}
+                    </td>
 
-                      {/* PRODUCT */}
-
-                      <td>
-                        <strong>
-                          {purchase.product?.name ||
-                            "Product deleted"}
-                        </strong>
-                      </td>
-
-                      {/* SUPPLIER */}
-
-                      <td>
-                        {purchase.supplier
-                          ?.companyName ||
-                          "Supplier deleted"}
-                      </td>
-
-                      {/* QUANTITY */}
-
-                      <td>
-                        {purchase.quantity}
-                      </td>
-
-                      {/* PURCHASE PRICE */}
-
-                      <td>
+                    <td>
+                      <strong>
                         ₹
                         {Number(
-                          purchase.purchasePrice || 0
+                          purchase.totalAmount || 0
                         ).toFixed(2)}
-                      </td>
+                      </strong>
+                    </td>
 
-                      {/* TOTAL */}
+                    <td>
+                      {purchase.createdAt
+                        ? new Date(
+                            purchase.createdAt
+                          ).toLocaleDateString("en-IN")
+                        : "-"}
+                    </td>
 
-                      <td>
-                        <strong>
-                          ₹
-                          {Number(
-                            purchase.totalAmount || 0
-                          ).toFixed(2)}
-                        </strong>
-                      </td>
+                    {canManagePurchases && (
+  <td>
+    <div className="action-buttons">
 
-                      {/* DATE */}
+      {/* ADMIN AND MANAGER - EDIT */}
+      <button
+        type="button"
+        className="edit-btn"
+        onClick={() => handleEdit(purchase)}
+      >
+        Edit
+      </button>
 
-                      <td>
-                        {purchase.createdAt
-                          ? new Date(
-                              purchase.createdAt
-                            ).toLocaleDateString(
-                              "en-IN"
-                            )
-                          : "-"}
-                      </td>
+      {/* ONLY ADMIN - DELETE */}
+      {canDeletePurchase && (
+        <button
+          type="button"
+          className="delete-btn"
+          onClick={() => handleDelete(purchase._id)}
+        >
+          Delete
+        </button>
+      )}
 
-                      {/* ACTIONS */}
-
-                      {canManagePurchases && (
-                        <td>
-
-                          <div className="action-buttons">
-
-                            <button
-                              className="edit-btn"
-                              onClick={() =>
-                                handleEdit(purchase)
-                              }
-                            >
-                              Edit
-                            </button>
-
-                            <button
-                              className="delete-btn"
-                              onClick={() =>
-                                handleDelete(
-                                  purchase._id
-                                )
-                              }
-                            >
-                              Delete
-                            </button>
-
-                          </div>
-
-                        </td>
-                      )}
-
-                    </tr>
-
-                  )
-                )}
-
+    </div>
+  </td>
+)}
+                  </tr>
+                ))}
               </tbody>
-
             </table>
-
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 };

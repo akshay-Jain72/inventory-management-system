@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import  { useEffect, useState } from "react";
 import "./Sales.css";
 
 const API_URL = "https://inventory-management-system-lzyk.onrender.com";
@@ -25,23 +26,54 @@ const Sales = () => {
   // USER / ROLE
   // ==============================
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  })();
+
   const token = localStorage.getItem("token");
+  const role = user?.role?.toLowerCase().trim() || "staff";
 
-  const role = user?.role || "staff";
+  // ADMIN + MANAGER + STAFF CAN ADD SALE
+  const canCreateSales =
+    role === "admin" ||
+    role === "manager" ||
+    role === "staff";
 
+  // ADMIN + MANAGER CAN EDIT / DELETE
   const canManageSales =
     role === "admin" || role === "manager";
 
+  // ADMIN + MANAGER CAN VIEW FINANCIAL DATA
   const canViewFinancialData =
     role === "admin" || role === "manager";
+
+  // ==============================
+  // SAFE RESPONSE PARSING
+  // ==============================
+
+  const readResponse = async (response) => {
+    const text = await response.text();
+
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return {};
+    }
+  };
 
   // ==============================
   // AUTH ERROR
   // ==============================
 
   const handleAuthError = (status) => {
-    if (status === 401 || status === 403) {
+    // Only 401 should log the user out.
+    // 403 means permission denied, not necessarily expired login.
+
+    if (status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
 
@@ -60,27 +92,27 @@ const Sales = () => {
   const fetchSales = async () => {
     try {
       const response = await fetch(`${API_URL}/sales`, {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (handleAuthError(response.status)) {
         return;
       }
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to fetch sales"
-        );
+        setError(data.message || "Failed to fetch sales");
+        return;
       }
 
       setSales(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.log(error);
-      setError(error.message || "Failed to load sales");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load sales. Please try again.");
     }
   };
 
@@ -90,58 +122,63 @@ const Sales = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/products`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/products`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (handleAuthError(response.status)) {
         return;
       }
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to fetch products"
-        );
+        setError(data.message || "Failed to fetch products");
+        return;
       }
 
       setProducts(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.log(error);
-      setError(error.message || "Failed to load products");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load products. Please try again.");
     }
   };
 
   // ==============================
-  // LOAD DATA
+  // INITIAL LOAD
   // ==============================
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadData = async () => {
       if (!token) {
         window.location.href = "/login";
         return;
       }
 
-      setLoading(true);
-      setError("");
-
       await Promise.all([
         fetchSales(),
         fetchProducts(),
       ]);
 
-      setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+      }
     };
 
     loadData();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+
+    // Initial loading for the current token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // ==============================
   // INPUT CHANGE
@@ -171,6 +208,7 @@ const Sales = () => {
     });
 
     setEditingId(null);
+    setMessage("");
     setError("");
   };
 
@@ -181,31 +219,41 @@ const Sales = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!canManageSales) {
+    if (!canCreateSales) {
+      setError("You are not allowed to add sales.");
       return;
     }
 
     setMessage("");
     setError("");
 
+    // Product validation for new sale
     if (!editingId && !formData.productId) {
-      setError("Please select a product");
+      setError("Please select a product.");
       return;
     }
 
+    // Quantity validation
+    const quantity = Number(formData.quantity);
+
     if (
-      !formData.quantity ||
-      Number(formData.quantity) <= 0
+      formData.quantity === "" ||
+      !Number.isFinite(quantity) ||
+      quantity <= 0
     ) {
-      setError("Quantity must be greater than 0");
+      setError("Quantity must be greater than 0.");
       return;
     }
+
+    // Selling price validation
+    const sellingPrice = Number(formData.sellingPrice);
 
     if (
       formData.sellingPrice === "" ||
-      Number(formData.sellingPrice) < 0
+      !Number.isFinite(sellingPrice) ||
+      sellingPrice < 0
     ) {
-      setError("Please enter a valid selling price");
+      setError("Please enter a valid selling price.");
       return;
     }
 
@@ -222,17 +270,13 @@ const Sales = () => {
 
       const body = isEditing
         ? {
-            quantity: Number(formData.quantity),
-            sellingPrice: Number(
-              formData.sellingPrice
-            ),
+            quantity,
+            sellingPrice,
           }
         : {
             productId: formData.productId,
-            quantity: Number(formData.quantity),
-            sellingPrice: Number(
-              formData.sellingPrice
-            ),
+            quantity,
+            sellingPrice,
           };
 
       const response = await fetch(url, {
@@ -244,37 +288,38 @@ const Sales = () => {
         body: JSON.stringify(body),
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (handleAuthError(response.status)) {
         return;
       }
 
       if (!response.ok) {
-        throw new Error(
+        setError(
           data.message ||
             (isEditing
-              ? "Failed to update sale"
-              : "Failed to add sale")
+              ? "Failed to update sale."
+              : "Failed to add sale.")
         );
+        return;
       }
 
       setMessage(
         data.message ||
           (isEditing
-            ? "Sale updated successfully"
-            : "Sale added successfully")
+            ? "Sale updated successfully."
+            : "Sale added successfully.")
       );
 
       resetForm();
 
-      await fetchSales();
-      await fetchProducts();
-    } catch (error) {
-      console.log(error);
-      setError(
-        error.message || "Something went wrong"
-      );
+      await Promise.all([
+        fetchSales(),
+        fetchProducts(),
+      ]);
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong. Please try again.");
     } finally {
       setFormLoading(false);
     }
@@ -299,9 +344,10 @@ const Sales = () => {
         sale.product?._id ||
         sale.product ||
         "",
-      quantity: sale.quantity || "",
-      sellingPrice:
-        sale.sellingPrice || "",
+
+      quantity: sale.quantity ?? "",
+
+      sellingPrice: sale.sellingPrice ?? "",
     });
 
     window.scrollTo({
@@ -341,30 +387,28 @@ const Sales = () => {
         }
       );
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (handleAuthError(response.status)) {
         return;
       }
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to delete sale"
-        );
+        setError(data.message || "Failed to delete sale.");
+        return;
       }
 
       setMessage(
-        data.message ||
-          "Sale deleted successfully"
+        data.message || "Sale deleted successfully."
       );
 
-      await fetchSales();
-      await fetchProducts();
-    } catch (error) {
-      console.log(error);
-      setError(
-        error.message || "Failed to delete sale"
-      );
+      await Promise.all([
+        fetchSales(),
+        fetchProducts(),
+      ]);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete sale. Please try again.");
     }
   };
 
@@ -400,8 +444,6 @@ const Sales = () => {
       <div className="sales-header">
 
         <div>
-        
-
           <h1>Sales</h1>
 
           <p>
@@ -415,7 +457,6 @@ const Sales = () => {
         </div>
 
       </div>
-
 
       {/* ALERTS */}
 
@@ -433,10 +474,9 @@ const Sales = () => {
         </div>
       )}
 
-
       {/* ADD / EDIT FORM */}
 
-      {canManageSales && (
+      {canCreateSales && (
         <div className="sales-card">
 
           <div className="card-header">
@@ -456,7 +496,6 @@ const Sales = () => {
             </div>
 
           </div>
-
 
           <form onSubmit={handleSubmit}>
 
@@ -506,7 +545,6 @@ const Sales = () => {
 
               </div>
 
-
               {/* QUANTITY */}
 
               <div className="form-group">
@@ -522,11 +560,11 @@ const Sales = () => {
                   onChange={handleChange}
                   placeholder="Enter quantity"
                   min="1"
+                  step="1"
                   required
                 />
 
               </div>
-
 
               {/* SELLING PRICE */}
 
@@ -557,7 +595,6 @@ const Sales = () => {
 
             </div>
 
-
             {/* BUTTONS */}
 
             <div className="form-actions">
@@ -574,7 +611,7 @@ const Sales = () => {
                   : "Add Sale"}
               </button>
 
-              {editingId && (
+              {editingId && canManageSales && (
                 <button
                   type="button"
                   className="secondary-btn"
@@ -591,7 +628,6 @@ const Sales = () => {
 
         </div>
       )}
-
 
       {/* SALES HISTORY */}
 
@@ -622,7 +658,6 @@ const Sales = () => {
 
         </div>
 
-
         {/* EMPTY */}
 
         {sales.length === 0 ? (
@@ -633,7 +668,7 @@ const Sales = () => {
             </h3>
 
             <p>
-              {canManageSales
+              {canCreateSales
                 ? "Add your first sale using the form above."
                 : "No sales records are available."}
             </p>
@@ -648,7 +683,6 @@ const Sales = () => {
               <thead>
 
                 <tr>
-
                   <th>#</th>
                   <th>Product</th>
                   <th>Quantity</th>
@@ -667,11 +701,9 @@ const Sales = () => {
                   {canManageSales && (
                     <th>Actions</th>
                   )}
-
                 </tr>
 
               </thead>
-
 
               <tbody>
 
@@ -683,12 +715,15 @@ const Sales = () => {
                   return (
                     <tr key={sale._id}>
 
+                      {/* NUMBER */}
+
                       <td>
                         <span className="row-number">
                           {index + 1}
                         </span>
                       </td>
 
+                      {/* PRODUCT */}
 
                       <td>
                         <strong>
@@ -697,6 +732,7 @@ const Sales = () => {
                         </strong>
                       </td>
 
+                      {/* QUANTITY */}
 
                       <td>
                         <span className="quantity">
@@ -704,6 +740,7 @@ const Sales = () => {
                         </span>
                       </td>
 
+                      {/* FINANCIAL DATA */}
 
                       {canViewFinancialData && (
                         <>
@@ -750,6 +787,7 @@ const Sales = () => {
                         </>
                       )}
 
+                      {/* DATE */}
 
                       <td>
                         {sale.createdAt
@@ -761,6 +799,7 @@ const Sales = () => {
                           : "-"}
                       </td>
 
+                      {/* ACTIONS */}
 
                       {canManageSales && (
                         <td>
@@ -768,6 +807,7 @@ const Sales = () => {
                           <div className="action-buttons">
 
                             <button
+                              type="button"
                               className="edit-btn"
                               onClick={() =>
                                 handleEdit(sale)
@@ -777,6 +817,7 @@ const Sales = () => {
                             </button>
 
                             <button
+                              type="button"
                               className="delete-btn"
                               onClick={() =>
                                 handleDelete(
@@ -801,7 +842,6 @@ const Sales = () => {
             </table>
 
           </div>
-
         )}
 
       </div>
