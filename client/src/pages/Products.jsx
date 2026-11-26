@@ -49,7 +49,7 @@ const Products = () => {
   const canAddProduct = isAdmin || isManager || isStaff;
   const canEditProduct = isAdmin || isManager;
   const canDeleteProduct = isAdmin;
-  const canViewPrice = isAdmin || isManager;
+  const canViewPrice = isAdmin || isManager || isStaff;
 
   const token = localStorage.getItem("token");
 
