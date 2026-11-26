@@ -1,4 +1,6 @@
 
+import { useEffect } from "react";
+
 import {
   BrowserRouter,
   Routes,
@@ -23,68 +25,127 @@ import Users from "./pages/Users";
 import "./App.css";
 
 // ======================================
-// Protected Route
+// BLOCKED USER CHECKER
+// ======================================
+
+const BlockedUserChecker = () => {
+
+  useEffect(() => {
+
+    const checkUser = async () => {
+
+      const token = localStorage.getItem("token");
+
+      if (!token) return;
+
+      try {
+
+        const response = await fetch(
+          "https://inventory-management-system-lzyk.onrender.com/api/auth/me",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        // Blocked user OR expired/invalid token
+        if (response.status === 403 || response.status === 401) {
+
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+
+          window.location.href = "/login";
+
+        }
+
+      } catch (error) {
+
+        console.error("User status check failed:", error);
+
+      }
+
+    };
+
+    // Check immediately
+    checkUser();
+
+    // Check every 10 seconds
+    const interval = setInterval(checkUser, 10000);
+
+    return () => clearInterval(interval);
+
+  }, []);
+
+  return null;
+};
+
+// ======================================
+// PROTECTED ROUTE
 // ======================================
 
 const ProtectedRoute = ({ children }) => {
+
   const token = localStorage.getItem("token");
   const userData = localStorage.getItem("user");
-
-  console.log("Protected Route Token:", token);
-  console.log("Protected Route User:", userData);
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
   if (!userData) {
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
     return <Navigate to="/login" replace />;
+
   }
 
   try {
-    JSON.parse(userData);
-  } catch {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
 
-  return <Navigate to="/login" replace />;
-}
+    JSON.parse(userData);
+
+  } catch {
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    return <Navigate to="/login" replace />;
+
+  }
 
   return children;
+
 };
+
 // ======================================
-// App
+// APP
 // ======================================
 
 const App = () => {
+
   return (
+
     <BrowserRouter>
 
       <Routes>
 
-        {/* =================================
-            PUBLIC ROUTES
-        ================================= */}
+        {/* PUBLIC ROUTES */}
 
-        {/* Login */}
         <Route
           path="/login"
           element={<Login />}
         />
 
-        {/* Register */}
         <Route
           path="/register"
           element={<Register />}
         />
 
 
-        {/* =================================
-            PROTECTED ROUTES
-        ================================= */}
+        {/* PROTECTED ROUTES */}
 
         <Route
           path="/*"
@@ -98,35 +159,36 @@ const App = () => {
       </Routes>
 
     </BrowserRouter>
+
   );
+
 };
 
 // ======================================
-// Dashboard Layout
+// DASHBOARD LAYOUT
 // ======================================
 
 const DashboardLayout = () => {
+
   return (
+
     <div className="app-layout">
 
-      {/* =================================
-          NAVBAR
-      ================================= */}
+      {/* BLOCK CHECKER */}
+
+      <BlockedUserChecker />
+
+      {/* NAVBAR */}
 
       <Navbar />
 
-
-      {/* =================================
-          PAGE CONTENT
-      ================================= */}
+      {/* PAGE CONTENT */}
 
       <main className="page-content">
 
         <Routes>
 
-          {/* =================================
-              DEFAULT
-          ================================= */}
+          {/* DEFAULT */}
 
           <Route
             path="/"
@@ -138,70 +200,56 @@ const DashboardLayout = () => {
             }
           />
 
-
-          {/* =================================
-              DASHBOARD
-          ================================= */}
+          {/* DASHBOARD */}
 
           <Route
             path="/dashboard"
             element={<Dashboard />}
           />
 
-
-          {/* =================================
-              PRODUCTS
-          ================================= */}
+          {/* PRODUCTS */}
 
           <Route
             path="/products"
             element={<Products />}
           />
 
-
-          {/* =================================
-              PURCHASES
-          ================================= */}
+          {/* PURCHASES */}
 
           <Route
             path="/purchases"
             element={<Purchases />}
           />
 
-
-          {/* =================================
-              SALES
-          ================================= */}
+          {/* SALES */}
 
           <Route
             path="/sales"
             element={<Sales />}
           />
 
-
-          {/* =================================
-              SUPPLIERS
-          ================================= */}
+          {/* SUPPLIERS */}
 
           <Route
             path="/suppliers"
             element={<Suppliers />}
           />
 
-
-          {/* =================================
-              REPORTS
-          ================================= */}
+          {/* REPORTS */}
 
           <Route
             path="/reports"
             element={<Reports />}
           />
 
+          {/* USERS */}
 
-          {/* =================================
-              UNKNOWN URL
-          ================================= */}
+          <Route
+            path="/users"
+            element={<Users />}
+          />
+
+          {/* UNKNOWN URL */}
 
           <Route
             path="*"
@@ -213,15 +261,14 @@ const DashboardLayout = () => {
             }
           />
 
-
-          <Route path="/users" element={<Users />} />
-
         </Routes>
 
       </main>
 
     </div>
+
   );
+
 };
 
 export default App;

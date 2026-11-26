@@ -1256,73 +1256,133 @@ app.get(
 );
 
 
-// GET ALL USERS - ADMIN ONLY
-app.get("/users", authMiddleware, roleMiddleware("admin"), async (req, res) => {
-  try {
-    const users = await User.find()
-      .select("-password")
-      .sort({ createdAt: -1 });
 
-    res.status(200).json(users);
-  } catch (error) {
-    console.error("Get users error:", error);
-    res.status(500).json({ message: "Failed to fetch users" });
+ // GET ALL USERS - ADMIN ONLY
+app.get(
+  "/users",
+  authMiddleware,
+  roleMiddleware("admin"),
+  async (req, res) => {
+    try {
+      const users = await User.find()
+        .select("-password")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(users);
+    } catch (error) {
+      console.error("Get users error:", error);
+      return res.status(500).json({
+        message: "Failed to fetch users",
+      });
+    }
   }
-});
+);
 
-// BLOCK USER - ADMIN ONLY
-app.patch("/users/:id/block", authMiddleware, roleMiddleware("admin"), async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
 
-    if (user.role === "admin") {
-      return res.status(403).json({ message: "Admin cannot be blocked" });
-    }
+ // BLOCK USER - ADMIN ONLY
+app.patch(
+  "/users/:id/block",
+  authMiddleware,
+  roleMiddleware("admin"),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
 
-    if (user.isBlocked) {
-      return res.status(400).json({ message: "User already blocked" });
-    }
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
 
-    user.isBlocked = true;
-    await user.save();
+      // Admin ko block nahi kar sakte
+      if (user.role?.toLowerCase() === "admin") {
+        return res.status(403).json({
+          message: "Admin cannot be blocked",
+        });
+      }
 
-    res.json({ message: "User blocked successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to block user" });
+      if (user.isBlocked) {
+        return res.status(400).json({
+          message: "User already blocked",
+        });
+      }
+
+      // Manager ya Staff block
+      user.isBlocked = true;
+      await user.save();
+
+      return res.status(200).json({
+        message: `${user.role} blocked successfully`,
+        user: {
+          id: user._id,
+          name: user.name,
+          role: user.role,
+          isBlocked: user.isBlocked,
+        },
+      });
+} catch (error) {
+  console.error("Block user error:", error);
+
+  return res.status(500).json({
+    message: "Failed to block user",
+    error: error.message,
+  });
+}
   }
-});
+);
+
 
 // UNBLOCK USER - ADMIN ONLY
-app.patch("/users/:id/unblock", authMiddleware, roleMiddleware("admin"), async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
+app.patch(
+  "/users/:id/unblock",
+  authMiddleware,
+  roleMiddleware("admin"),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      if (user.role?.toLowerCase() === "admin") {
+        return res.status(403).json({
+          message: "Admin cannot be modified here",
+        });
+      }
+
+      if (!user.isBlocked) {
+        return res.status(400).json({
+          message: "User is already active",
+        });
+      }
+
+      user.isBlocked = false;
+      await user.save();
+
+      return res.status(200).json({
+        message: `${user.role} unblocked successfully`,
+        user: {
+          id: user._id,
+          name: user.name,
+          role: user.role,
+          isBlocked: user.isBlocked,
+        },
+      });
+
+    } catch (error) {
+      console.error("Unblock user error:", error);
+
+      return res.status(500).json({
+        message: "Failed to unblock user",
+      });
     }
-
-    if (user.role === "admin") {
-      return res.status(403).json({ message: "Admin cannot be modified here" });
-    }
-
-    if (!user.isBlocked) {
-      return res.status(400).json({ message: "User is already active" });
-    }
-
-    user.isBlocked = false;
-    await user.save();
-
-    res.json({ message: "User unblocked successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to unblock user" });
   }
-});
+);
+
 
 const PORT = process.env.PORT || 5000;
 
