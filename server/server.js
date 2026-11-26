@@ -192,7 +192,7 @@ app.delete(
 app.post(
   "/purchases",
   authMiddleware,
-  roleMiddleware("admin", "manager"),
+  roleMiddleware("admin", "manager", "staff"),
   async (req, res) => { 
   try { 
     const { 

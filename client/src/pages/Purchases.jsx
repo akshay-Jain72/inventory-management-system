@@ -38,7 +38,10 @@ const Purchases = () => {
   const token = localStorage.getItem("token");
   const role = user?.role?.toLowerCase().trim() || "";
 
-  const canManagePurchases =
+ const canAddPurchase =
+  role === "admin" || role === "manager" || role === "staff";
+
+const canManagePurchases =
   role === "admin" || role === "manager";
 
 const canDeletePurchase = role === "admin";
@@ -203,10 +206,15 @@ const canDeletePurchase = role === "admin";
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!canManagePurchases) {
-      setError("You do not have permission to manage purchases.");
-      return;
-    }
+   if (editingId && !canManagePurchases) {
+  setError("You do not have permission to edit purchases.");
+  return;
+}
+
+if (!editingId && !canAddPurchase) {
+  setError("You do not have permission to add purchases.");
+  return;
+}
 
     setMessage("");
     setError("");
@@ -418,7 +426,7 @@ const canDeletePurchase = role === "admin";
       )}
 
       {/* FORM: ADMIN + MANAGER */}
-      {canManagePurchases && (
+      {canAddPurchase && (
         <div className="purchase-form-card">
           <div className="purchase-form-header">
             <div>
