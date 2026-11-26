@@ -1,10 +1,17 @@
+
 const roleMiddleware = (...allowedRoles) => {
   return (req, res, next) => {
 
-    console.log("User Role:", req.user.role);
-    console.log("Allowed Roles:", allowedRoles);
+    const userRole = req.user?.role?.trim().toLowerCase();
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const normalizedRoles = allowedRoles.map(role =>
+      role.trim().toLowerCase()
+    );
+
+    console.log("User Role:", userRole);
+    console.log("Allowed Roles:", normalizedRoles);
+
+    if (!normalizedRoles.includes(userRole)) {
       return res.status(403).json({
         message: "Access denied"
       });
