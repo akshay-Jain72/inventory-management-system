@@ -631,10 +631,11 @@ app.delete(
   }
 );
 // Create supplier
+// Create supplier
 app.post(
   "/suppliers",
   authMiddleware,
-  roleMiddleware("admin", "manager"),
+  roleMiddleware("admin", "manager", "staff"),
   async (req, res) => {
   try {
     const supplier = await Supplier.create(req.body);

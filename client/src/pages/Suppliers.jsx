@@ -42,8 +42,9 @@ const Suppliers = () => {
   const isManager = role === "manager";
   const isStaff = role === "staff";
 
-  const canManageSuppliers = isAdmin || isManager;
-  const canDeleteSupplier = isAdmin;
+  const canAddSupplier = isAdmin || isManager || isStaff;
+const canManageSuppliers = isAdmin || isManager;
+const canDeleteSupplier = isAdmin;
 
   // RESPONSE JSON HANDLER
   const readResponse = async (response) => {
@@ -212,10 +213,10 @@ const Suppliers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!canManageSuppliers) {
-      setError("You are not allowed to manage suppliers.");
-      return;
-    }
+if (!canAddSupplier || (editingId && !canManageSuppliers)) {
+  setError("You are not allowed to perform this action.");
+  return;
+}
 
     setError("");
     setMessage("");
@@ -420,9 +421,8 @@ const Suppliers = () => {
           {error}
         </div>
       )}
-
-      {/* FORM - ADMIN AND MANAGER */}
-      {canManageSuppliers && (
+{/* FORM - ADMIN, MANAGER AND STAFF */}
+{canAddSupplier && (
         <div className="supplier-form-card">
 
           <div className="supplier-form-header">
