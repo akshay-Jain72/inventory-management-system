@@ -1281,6 +1281,46 @@ app.get(
 
 // BLOCK USER - ADMIN ONLY
 
+ 
+
+// Admin only test route
+app.get(
+  "/api/admin-test",
+  authMiddleware,
+  roleMiddleware("admin"),
+  (req, res) => {
+    res.json({
+      message: "Admin access successful"
+    });
+  }
+);
+
+
+
+ // GET ALL USERS - ADMIN ONLY
+app.get(
+  "/users",
+  authMiddleware,
+  roleMiddleware("admin"),
+  async (req, res) => {
+    try {
+      const users = await User.find()
+        .select("-password")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(users);
+    } catch (error) {
+      console.error("Get users error:", error);
+      return res.status(500).json({
+        message: "Failed to fetch users",
+      });
+    }
+  }
+);
+
+
+// BLOCK USER - ADMIN ONLY
+
  // BLOCK USER - ADMIN ONLY
 app.patch(
   "/users/:id/block",
@@ -1338,6 +1378,14 @@ app.patch(
     }
   }
 );
+
+
+// SERVER
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 
 // SERVER
