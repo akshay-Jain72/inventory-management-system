@@ -33,6 +33,7 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
+    // Blocked user check
     if (user.isBlocked) {
       return res.status(403).json({
         message: "Your account has been blocked"
@@ -40,7 +41,8 @@ const authMiddleware = async (req, res, next) => {
     }
 
     req.user = {
-      id: user._id,
+      id: user._id.toString(),
+      userId: user._id.toString(),
       name: user.name,
       email: user.email,
       role: user.role
@@ -49,7 +51,10 @@ const authMiddleware = async (req, res, next) => {
     next();
 
   } catch (error) {
-    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
       return res.status(401).json({
         message: "Invalid or expired token"
       });

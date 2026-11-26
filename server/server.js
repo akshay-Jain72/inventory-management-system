@@ -1279,8 +1279,9 @@ app.get(
 );
 
 
+// BLOCK USER - ADMIN ONLY
 
- // BLOCK USER - ADMIN ONLY
+// BLOCK USER - ADMIN ONLY
 app.patch(
   "/users/:id/block",
   authMiddleware,
@@ -1295,8 +1296,9 @@ app.patch(
         });
       }
 
-      // Admin ko block nahi kar sakte
-      if (user.role?.toLowerCase() === "admin") {
+      const normalizedRole = (user.role || "").trim().toLowerCase();
+
+      if (normalizedRole === "admin") {
         return res.status(403).json({
           message: "Admin cannot be blocked",
         });
@@ -1308,85 +1310,45 @@ app.patch(
         });
       }
 
-      // Manager ya Staff block
-      user.isBlocked = true;
-      await user.save();
-
-      return res.status(200).json({
-        message: `${user.role} blocked successfully`,
-        user: {
-          id: user._id,
-          name: user.name,
-          role: user.role,
-          isBlocked: user.isBlocked,
+      // Update only isBlocked (avoid full document validation)
+      const result = await User.updateOne(
+        {
+          _id: user._id,
+          isBlocked: false
         },
-      });
-} catch (error) {
-  console.error("Block user error:", error);
+        {
+          $set: {
+            isBlocked: true
+          }
+        }
+      );
 
-  return res.status(500).json({
-    message: "Failed to block user",
-    error: error.message,
-  });
-}
-  }
-);
-
-
-// UNBLOCK USER - ADMIN ONLY
-app.patch(
-  "/users/:id/unblock",
-  authMiddleware,
-  roleMiddleware("admin"),
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.params.id);
-
-      if (!user) {
-        return res.status(404).json({
-          message: "User not found",
-        });
-      }
-
-      if (user.role?.toLowerCase() === "admin") {
-        return res.status(403).json({
-          message: "Admin cannot be modified here",
-        });
-      }
-
-      if (!user.isBlocked) {
+      if (result.modifiedCount === 0) {
         return res.status(400).json({
-          message: "User is already active",
+          message: "User could not be blocked",
         });
       }
-
-      // Normalize role
-      user.role = user.role.trim().toLowerCase();
-
-      // Unblock user
-      user.isBlocked = false;
-
-      await user.save();
 
       return res.status(200).json({
-        message: `${user.role} unblocked successfully`,
+        message: `${normalizedRole} blocked successfully`,
         user: {
           id: user._id,
           name: user.name,
-          role: user.role,
-          isBlocked: user.isBlocked,
+          role: normalizedRole,
+          isBlocked: true,
         },
       });
 
     } catch (error) {
-      console.error("Unblock user error:", error);
+      console.error("Block user error:", error);
 
       return res.status(500).json({
-        message: "Failed to unblock user",
+        message: error.message,
       });
     }
   }
 );
+
 
 // SERVER
 const PORT = process.env.PORT || 5000;
