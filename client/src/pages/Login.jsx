@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
@@ -13,7 +14,6 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setError("");
 
     // Validation
@@ -29,11 +29,9 @@ const Login = () => {
         "https://inventory-management-system-lzyk.onrender.com/api/auth/login",
         {
           method: "POST",
-
           headers: {
             "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
             email: email.trim(),
             password,
@@ -41,7 +39,10 @@ const Login = () => {
         }
       );
 
+      // Safely handle response
       const data = await response.json();
+
+      console.log("Login Response:", data);
 
       // Login failed
       if (!response.ok) {
@@ -51,44 +52,42 @@ const Login = () => {
         return;
       }
 
-      // Backend token check
+      // Token check
       if (!data.token) {
         setError(
-          "Login successful, but authentication token was not received."
+          "Authentication token was not received."
         );
         return;
       }
 
-      // Backend user check
+      // User check
       if (!data.user) {
         setError(
-          "Login successful, but user information was not received."
+          "User information was not received."
         );
         return;
       }
 
-      // =====================================
-      // SAVE TOKEN
-      // =====================================
+      // Save token
+      localStorage.setItem("token", data.token);
 
-      localStorage.setItem(
-        "token",
-        data.token
-      );
-
-      // =====================================
-      // SAVE USER
-      // =====================================
-
+      // Save user
       localStorage.setItem(
         "user",
         JSON.stringify(data.user)
       );
 
-      // =====================================
-      // REDIRECT
-      // =====================================
+      console.log(
+        "Saved Token:",
+        localStorage.getItem("token")
+      );
 
+      console.log(
+        "Saved User:",
+        localStorage.getItem("user")
+      );
+
+      // Redirect to dashboard
       navigate("/dashboard", {
         replace: true,
       });
@@ -106,20 +105,12 @@ const Login = () => {
 
   return (
     <div className="login-page">
-
       <div className="login-container">
 
         {/* HEADER */}
         <div className="login-header">
-
-          <h1>
-            Inventory Management
-          </h1>
-
-          <p>
-            Login to your account
-          </p>
-
+          <h1>Inventory Management</h1>
+          <p>Login to your account</p>
         </div>
 
         {/* ERROR */}
@@ -134,7 +125,6 @@ const Login = () => {
 
           {/* EMAIL */}
           <div className="form-group">
-
             <label htmlFor="email">
               Email
             </label>
@@ -147,14 +137,13 @@ const Login = () => {
               onChange={(e) =>
                 setEmail(e.target.value)
               }
+              autoComplete="email"
               required
             />
-
           </div>
 
           {/* PASSWORD */}
           <div className="form-group">
-
             <label htmlFor="password">
               Password
             </label>
@@ -167,9 +156,9 @@ const Login = () => {
               onChange={(e) =>
                 setPassword(e.target.value)
               }
+              autoComplete="current-password"
               required
             />
-
           </div>
 
           {/* LOGIN BUTTON */}
@@ -187,7 +176,6 @@ const Login = () => {
 
         {/* REGISTER */}
         <div className="register-link">
-
           <p>
             Don't have an account?{" "}
 
@@ -198,13 +186,10 @@ const Login = () => {
             >
               Register
             </span>
-
           </p>
-
         </div>
 
       </div>
-
     </div>
   );
 };

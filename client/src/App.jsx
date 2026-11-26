@@ -1,4 +1,4 @@
-import React from "react";
+
 import {
   BrowserRouter,
   Routes,
@@ -29,12 +29,13 @@ const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   const userData = localStorage.getItem("user");
 
-  // Token nahi hai
+  console.log("Protected Route Token:", token);
+  console.log("Protected Route User:", userData);
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // User data nahi hai
   if (!userData) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -42,21 +43,17 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // User data check
   try {
     JSON.parse(userData);
-  } catch (error) {
-    console.log("Invalid user data");
+  } catch {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    return <Navigate to="/login" replace />;
-  }
+  return <Navigate to="/login" replace />;
+}
 
   return children;
 };
-
 // ======================================
 // App
 // ======================================

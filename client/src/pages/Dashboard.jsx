@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 
@@ -9,59 +9,68 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
 
-  const fetchDashboard = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  
+const fetchDashboard = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      const response = await fetch(
-        "https://inventory-management-system-lzyk.onrender.com/dashboard",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      // Token expired / unauthorized
-      if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        navigate("/login");
-        return;
-      }
-
-      if (!response.ok) {
-        setError(
-          data.message || "Failed to load dashboard"
-        );
-        return;
-      }
-
-      setDashboard(data);
-    } catch (error) {
-      console.log("Dashboard Error:", error);
-      setError("Server error. Please try again.");
-    } finally {
-      setLoading(false);
+    if (!token) {
+      navigate("/login", { replace: true });
+      return;
     }
-  };
+
+    const response = await fetch(
+      "https://inventory-management-system-lzyk.onrender.com/dashboard",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    console.log("Dashboard Status:", response.status);
+    console.log("Dashboard Response:", data);
+
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (response.status === 403) {
+      setError("Access denied. Your account does not have permission.");
+      return;
+    }
+
+    if (!response.ok) {
+      setError(data.message || "Failed to load dashboard");
+      return;
+    }
+
+    setDashboard(data);
+  } catch (error) {
+    console.log("Dashboard Error:", error);
+    setError("Server error. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+}, [navigate]);
 
   useEffect(() => {
-    fetchDashboard();
-  }, []);
+  const loadDashboard = async () => {
+    await fetchDashboard();
+  };
 
+  loadDashboard();
+}, []);
   // =========================
   // Loading
   // =========================
