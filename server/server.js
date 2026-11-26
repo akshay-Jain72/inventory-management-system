@@ -1244,6 +1244,130 @@ app.get("/api/auth/me", authMiddleware, async (req, res) => {
 
 
 
+ // GET ALL USERS - ADMIN ONLY
+app.get(
+  "/users",
+  authMiddleware,
+  roleMiddleware("admin"),
+  async (req, res) => {
+    try {
+      const users = await User.find()
+        .select("-password")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(users);
+    } catch (error) {
+      console.error("Get users error:", error);
+      return res.status(500).json({
+        message: "Failed to fetch users",
+      });
+    }
+  }
+);
+
+
+// BLOCK USER - ADMIN ONLY
+app.patch(
+  "/users/:id/block",
+  authMiddleware,
+  roleMiddleware("admin"),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      const normalizedRole = String(user.role || "")
+        .trim()
+        .toLowerCase();
+
+      if (normalizedRole === "admin") {
+        return res.status(403).json({
+          message: "Admin cannot be blocked",
+        });
+      }
+
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { isBlocked: true } },
+        { runValidators: false }
+      );
+
+      return res.status(200).json({
+        message: `${normalizedRole} blocked successfully`,
+        user: {
+          _id: user._id,
+          name: user.name,
+          role: normalizedRole,
+          isBlocked: true,
+        },
+      });
+    } catch (error) {
+      console.error("Block user error:", error);
+      return res.status(500).json({
+        message: error.message || "Server error",
+      });
+    }
+  }
+);
+
+
+// UNBLOCK USER - ADMIN ONLY
+app.patch(
+  "/users/:id/unblock",
+  authMiddleware,
+  roleMiddleware("admin"),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      const normalizedRole = String(user.role || "")
+        .trim()
+        .toLowerCase();
+
+      if (normalizedRole === "admin") {
+        return res.status(403).json({
+          message: "Admin cannot be unblocked",
+        });
+      }
+
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { isBlocked: false } },
+        { runValidators: false }
+      );
+
+      return res.status(200).json({
+        message: `${normalizedRole} unblocked successfully`,
+        user: {
+          _id: user._id,
+          name: user.name,
+          role: normalizedRole,
+          isBlocked: false,
+        },
+      });
+    } catch (error) {
+      console.error("Unblock user error:", error);
+      return res.status(500).json({
+        message: error.message || "Server error",
+      });
+    }
+  }
+);
+
+
+
+
 
 // SERVER
 const PORT = process.env.PORT || 5000;
