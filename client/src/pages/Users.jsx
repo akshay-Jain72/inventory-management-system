@@ -4,6 +4,22 @@ import "./Users.css";
 
 const API = "https://inventory-management-system-lzyk.onrender.com";
 
+// SAFE JSON RESPONSE FUNCTION
+async function parseResponse(response) {
+  const responseText = await response.text();
+
+  console.log("Status:", response.status);
+  console.log("Response text:", responseText);
+
+  try {
+    return responseText ? JSON.parse(responseText) : {};
+  } catch {
+    throw new Error(
+      `Server returned HTML instead of JSON. Status: ${response.status}. Please check backend route.`
+    );
+  }
+}
+
 // FETCH USERS FUNCTION
 async function getUsers(token) {
   if (!token) {
@@ -17,7 +33,7 @@ async function getUsers(token) {
     },
   });
 
-  const data = await response.json();
+  const data = await parseResponse(response);
 
   if (!response.ok) {
     throw new Error(data.message || "Failed to fetch users");
@@ -54,7 +70,7 @@ function Users() {
           setUsers(data);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Load users error:", err);
 
         if (!cancelled) {
           setError(err.message || "Failed to load users");
@@ -82,14 +98,14 @@ function Users() {
       const data = await getUsers(token);
       setUsers(data);
     } catch (err) {
-      console.error(err);
+      console.error("Refresh users error:", err);
       setError(err.message || "Failed to refresh users");
     } finally {
       setLoading(false);
     }
   }
 
-  // BLOCK / UNBLOCK
+  // BLOCK / UNBLOCK USER
   async function handleUserStatus(userId, isBlocked) {
     try {
       setActionLoading(userId);
@@ -107,17 +123,15 @@ function Users() {
         }
       );
 
-      const data = await response.json();
+      const data = await parseResponse(response);
 
-      // DEBUG RESPONSE
-      console.log("Status response:", response.status);
       console.log("Server response:", data);
 
       if (!response.ok) {
         throw new Error(data.message || "Update failed");
       }
 
-      // UPDATE STATUS FROM BACKEND RESPONSE
+      // UPDATE USER STATUS
       setUsers((oldUsers) =>
         oldUsers.map((user) =>
           user._id === userId

@@ -1321,9 +1321,10 @@ app.get(
 
 // BLOCK USER - ADMIN ONLY
 
- // BLOCK USER - ADMIN ONLY
+// UNBLOCK USER - ADMIN ONLY
+// UNBLOCK USER - ADMIN ONLY
 app.patch(
-  "/users/:id/block",
+  "/users/:id/unblock",
   authMiddleware,
   roleMiddleware("admin"),
   async (req, res) => {
@@ -1331,9 +1332,7 @@ app.patch(
       const user = await User.findById(req.params.id);
 
       if (!user) {
-        return res.status(404).json({
-          message: "User not found",
-        });
+        return res.status(404).json({ message: "User not found" });
       }
 
       const normalizedRole = String(user.role || "")
@@ -1342,14 +1341,13 @@ app.patch(
 
       if (normalizedRole === "admin") {
         return res.status(403).json({
-          message: "Admin cannot be blocked",
+          message: "Admin cannot be unblocked",
         });
       }
 
-      // Update only isBlocked field
       const result = await User.updateOne(
         { _id: user._id },
-        { $set: { isBlocked: true } },
+        { $set: { isBlocked: false } },
         { runValidators: false }
       );
 
@@ -1360,28 +1358,22 @@ app.patch(
       }
 
       return res.status(200).json({
-        message: `${normalizedRole} blocked successfully`,
+        message: `${normalizedRole} unblocked successfully`,
         user: {
           _id: user._id,
           name: user.name,
           role: normalizedRole,
-          isBlocked: true,
+          isBlocked: false,
         },
       });
-
     } catch (error) {
-      console.error("Block user error:", error);
-
+      console.error("Unblock user error:", error);
       return res.status(500).json({
         message: error.message || "Server error",
       });
     }
   }
 );
-
-
-
-
 // SERVER
 const PORT = process.env.PORT || 5000;
 
