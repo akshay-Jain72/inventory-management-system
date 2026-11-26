@@ -32,7 +32,7 @@ mongoose
 app.post(
   "/products",
   authMiddleware,
-  roleMiddleware("admin", "manager"),
+  roleMiddleware("admin", "manager", "staff"),
   async (req, res) => {
     try {
       const { name, sku, price, quantity, category } = req.body;
