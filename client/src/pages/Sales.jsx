@@ -43,13 +43,17 @@ const Sales = () => {
     role === "manager" ||
     role === "staff";
 
-  // ADMIN + MANAGER CAN EDIT / DELETE
-  const canManageSales =
-    role === "admin" || role === "manager";
+  // ADMIN + MANAGER CAN EDIT
+const canEditSales =
+  role === "admin" || role === "manager";
 
-  // ADMIN + MANAGER CAN VIEW FINANCIAL DATA
-  const canViewFinancialData =
-    role === "admin" || role === "manager";
+// ADMIN ONLY CAN DELETE
+const canDeleteSales =
+  role === "admin";
+
+// ADMIN + MANAGER CAN VIEW FINANCIAL DATA
+const canViewFinancialData =
+  role === "admin" || role === "manager";
 
   // ==============================
   // SAFE RESPONSE PARSING
@@ -330,9 +334,9 @@ const Sales = () => {
   // ==============================
 
   const handleEdit = (sale) => {
-    if (!canManageSales) {
-      return;
-    }
+  if (!canEditSales) {
+    return;
+  }
 
     setMessage("");
     setError("");
@@ -361,9 +365,9 @@ const Sales = () => {
   // ==============================
 
   const handleDelete = async (id) => {
-    if (!canManageSales) {
-      return;
-    }
+  if (!canDeleteSales) {
+    return;
+  }
 
     const confirmed = window.confirm(
       "Are you sure you want to delete this sale?"
@@ -611,7 +615,7 @@ const Sales = () => {
                   : "Add Sale"}
               </button>
 
-              {editingId && canManageSales && (
+             {editingId && canEditSales && (
                 <button
                   type="button"
                   className="secondary-btn"
@@ -698,9 +702,9 @@ const Sales = () => {
 
                   <th>Date</th>
 
-                  {canManageSales && (
-                    <th>Actions</th>
-                  )}
+                 {canEditSales && (
+  <th>Actions</th>
+)}
                 </tr>
 
               </thead>
@@ -801,37 +805,31 @@ const Sales = () => {
 
                       {/* ACTIONS */}
 
-                      {canManageSales && (
-                        <td>
+{canEditSales && (
+  <td>
+    <div className="action-buttons">
 
-                          <div className="action-buttons">
+      <button
+        type="button"
+        className="edit-btn"
+        onClick={() => handleEdit(sale)}
+      >
+        Edit
+      </button>
 
-                            <button
-                              type="button"
-                              className="edit-btn"
-                              onClick={() =>
-                                handleEdit(sale)
-                              }
-                            >
-                              Edit
-                            </button>
+      {canDeleteSales && (
+        <button
+          type="button"
+          className="delete-btn"
+          onClick={() => handleDelete(sale._id)}
+        >
+          Delete
+        </button>
+      )}
 
-                            <button
-                              type="button"
-                              className="delete-btn"
-                              onClick={() =>
-                                handleDelete(
-                                  sale._id
-                                )
-                              }
-                            >
-                              Delete
-                            </button>
-
-                          </div>
-
-                        </td>
-                      )}
+    </div>
+  </td>
+)}
 
                     </tr>
                   );
